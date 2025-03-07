@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import Campaign from './Campaign';
 import AdSet from './AdSet';
@@ -120,20 +121,38 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     };
   }, []);
   
-  // Prevent default behavior for wheel events when Ctrl is pressed
+  // Fixed: Use a non-passive wheel event listener for the canvas element
   useEffect(() => {
-    const preventDefault = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
+    const canvas = canvasRef.current;
+    
+    if (!canvas) return;
+    
+    const wheelHandler = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey || spacePressed) {
         e.preventDefault();
+        
+        if (e.ctrlKey || e.metaKey) {
+          const delta = e.deltaY * -0.01;
+          const newScale = Math.min(Math.max(scale + delta, 0.5), 2);
+          setScale(newScale);
+        } else if (spacePressed) {
+          setPan(prev => ({
+            x: prev.x - e.deltaX,
+            y: prev.y - e.deltaY
+          }));
+        }
       }
     };
     
-    window.addEventListener('wheel', preventDefault, { passive: false });
+    canvas.addEventListener('wheel', wheelHandler, { passive: false });
     
     return () => {
-      window.removeEventListener('wheel', preventDefault);
+      canvas.removeEventListener('wheel', wheelHandler);
     };
-  }, []);
+  }, [scale, spacePressed, pan]);
+  
+  // Removed the old global wheel event handler
+  // We now handle wheel events specifically on the canvas element
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-secondary/20">
@@ -162,7 +181,6 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
         <div 
           ref={canvasRef}
           className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''}`}
-          onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
