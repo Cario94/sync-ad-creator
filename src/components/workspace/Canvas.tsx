@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import Campaign from './Campaign';
 import AdSet from './AdSet';
 import Ad from './Ad';
 import { toast } from 'sonner';
+import CanvasContextMenu from './CanvasContextMenu';
 
 interface CanvasProps {
   className?: string;
@@ -158,50 +158,55 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
         </button>
       </div>
       
-      <div 
-        ref={canvasRef}
-        className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''}`}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{
-          transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
-          transformOrigin: '0 0',
-          transition: isDragging ? 'none' : 'transform 0.1s'
-        }}
-      >
-        {/* Render workspace elements */}
-        {elements.map(element => {
-          if (element.type === 'campaign') {
-            return (
-              <Campaign 
-                key={element.id}
-                name={element.name}
-                initialPosition={element.position}
-              />
-            );
-          } else if (element.type === 'adset') {
-            return (
-              <AdSet 
-                key={element.id}
-                name={element.name}
-                initialPosition={element.position}
-              />
-            );
-          } else if (element.type === 'ad') {
-            return (
-              <Ad 
-                key={element.id}
-                name={element.name}
-                initialPosition={element.position}
-              />
-            );
-          }
-          return null;
-        })}
-      </div>
+      <CanvasContextMenu elementType="">
+        <div 
+          ref={canvasRef}
+          className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''}`}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          style={{
+            transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+            transformOrigin: '0 0',
+            transition: isDragging ? 'none' : 'transform 0.1s'
+          }}
+        >
+          {/* Render workspace elements */}
+          {elements.map(element => {
+            if (element.type === 'campaign') {
+              return (
+                <Campaign 
+                  key={element.id}
+                  id={element.id}
+                  name={element.name}
+                  initialPosition={element.position}
+                />
+              );
+            } else if (element.type === 'adset') {
+              return (
+                <AdSet 
+                  key={element.id}
+                  id={element.id}
+                  name={element.name}
+                  initialPosition={element.position}
+                />
+              );
+            } else if (element.type === 'ad') {
+              return (
+                <Ad 
+                  key={element.id}
+                  id={element.id}
+                  name={element.name}
+                  initialPosition={element.position}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      </CanvasContextMenu>
     </div>
   );
 };
