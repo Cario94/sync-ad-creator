@@ -4,17 +4,27 @@ import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { ImageIcon } from 'lucide-react';
 import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
+import { cn } from '@/lib/utils';
 
 interface AdProps {
   name: string;
   initialPosition?: { x: number; y: number };
   id?: string;
+  elementRef?: (element: HTMLDivElement | null) => void;
+  isCreatingConnection?: boolean;
+  activeConnectionId?: string;
+  onStartConnection?: () => void;
+  onCompleteConnection?: () => void;
 }
 
 const Ad: React.FC<AdProps> = ({ 
   name, 
   initialPosition = { x: 0, y: 0 },
-  id = `ad-${Date.now()}`
+  id = `ad-${Date.now()}`,
+  elementRef,
+  isCreatingConnection = false,
+  activeConnectionId,
+  onCompleteConnection,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adData, setAdData] = useState({
@@ -48,21 +58,55 @@ const Ad: React.FC<AdProps> = ({
     console.log(`Delete ad: ${adData.id}`);
   };
 
+  const isActiveConnection = activeConnectionId === id;
+  const isConnectionTarget = isCreatingConnection && !isActiveConnection;
+
+  const handleConnectionComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
+  };
+
+  // Set up the combined ref for both dragging and positioning
+  const combinedRef = (el: HTMLDivElement | null) => {
+    if (dragRef) {
+      // @ts-ignore - this is a hack to combine refs
+      dragRef.current = el;
+    }
+    if (elementRef) {
+      elementRef(el);
+    }
+  };
+
   return (
     <>
       <CanvasContextMenu onEdit={() => setDialogOpen(true)} elementType="ad">
         <div
-          ref={dragRef}
-          className={`absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab ${
-            isDragging ? 'cursor-grabbing shadow-md opacity-90 z-50' : 'z-10'
-          } transition-shadow duration-200`}
+          ref={combinedRef}
+          className={cn(
+            "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab",
+            isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
+            isActiveConnection ? "ring-2 ring-primary" : "",
+            isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
+            "transition-shadow duration-200"
+          )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
           }}
-          onMouseDown={handleMouseDown}
+          onMouseDown={(e) => {
+            if (isCreatingConnection) {
+              handleConnectionComplete(e);
+            } else {
+              handleMouseDown(e);
+            }
+          }}
           onDoubleClick={handleDoubleClick}
+          onClick={(e) => {
+            if (isConnectionTarget) {
+              handleConnectionComplete(e);
+            }
+          }}
         >
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center">

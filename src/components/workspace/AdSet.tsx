@@ -1,20 +1,31 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
-import { Users } from 'lucide-react';
+import { Users, Link } from 'lucide-react';
 import AdSetDialog from './dialogs/AdSetDialog';
 import CanvasContextMenu from './CanvasContextMenu';
+import { cn } from '@/lib/utils';
 
 interface AdSetProps {
   name: string;
   initialPosition?: { x: number; y: number };
   id?: string;
+  elementRef?: (element: HTMLDivElement | null) => void;
+  isCreatingConnection?: boolean;
+  activeConnectionId?: string;
+  onStartConnection?: () => void;
+  onCompleteConnection?: () => void;
 }
 
 const AdSet: React.FC<AdSetProps> = ({ 
   name, 
   initialPosition = { x: 0, y: 0 },
-  id = `adset-${Date.now()}`
+  id = `adset-${Date.now()}`,
+  elementRef,
+  isCreatingConnection = false,
+  activeConnectionId,
+  onStartConnection,
+  onCompleteConnection,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adSetData, setAdSetData] = useState({
@@ -52,21 +63,65 @@ const AdSet: React.FC<AdSetProps> = ({
     console.log(`Delete ad set: ${adSetData.id}`);
   };
 
+  const isActiveConnection = activeConnectionId === id;
+  const isConnectionTarget = isCreatingConnection && !isActiveConnection;
+
+  // Handle connection operations
+  const handleConnectionStart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onStartConnection) onStartConnection();
+  };
+
+  const handleConnectionComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
+  };
+
+  // Set up the combined ref for both dragging and positioning
+  const combinedRef = (el: HTMLDivElement | null) => {
+    if (dragRef) {
+      // @ts-ignore - this is a hack to combine refs
+      dragRef.current = el;
+    }
+    if (elementRef) {
+      elementRef(el);
+    }
+  };
+
   return (
     <>
-      <CanvasContextMenu onEdit={() => setDialogOpen(true)} elementType="adset">
+      <CanvasContextMenu 
+        onEdit={() => setDialogOpen(true)} 
+        onConnect={onStartConnection}
+        elementType="adset"
+      >
         <div
-          ref={dragRef}
-          className={`absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-accent-foreground/30 cursor-grab ${
-            isDragging ? 'cursor-grabbing shadow-md opacity-90 z-50' : 'z-10'
-          } transition-shadow duration-200`}
+          ref={combinedRef}
+          className={cn(
+            "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-accent-foreground/30 cursor-grab",
+            isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
+            isActiveConnection ? "ring-2 ring-primary" : "",
+            isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
+            "transition-shadow duration-200"
+          )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
           }}
-          onMouseDown={handleMouseDown}
+          onMouseDown={(e) => {
+            if (isCreatingConnection) {
+              handleConnectionComplete(e);
+            } else {
+              handleMouseDown(e);
+            }
+          }}
           onDoubleClick={handleDoubleClick}
+          onClick={(e) => {
+            if (isConnectionTarget) {
+              handleConnectionComplete(e);
+            }
+          }}
         >
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-accent-foreground/10 flex items-center justify-center">
@@ -78,6 +133,15 @@ const AdSet: React.FC<AdSetProps> = ({
           <div className="mt-2 text-xs text-muted-foreground">
             Budget: ${adSetData.budget}/day • Locations: {adSetData.locations.join(', ')}
           </div>
+          
+          {/* Connection button */}
+          <button
+            className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
+            onClick={handleConnectionStart}
+            title="Connect to Ad"
+          >
+            <Link size={12} />
+          </button>
         </div>
       </CanvasContextMenu>
 

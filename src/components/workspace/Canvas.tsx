@@ -4,6 +4,7 @@ import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
 import CanvasElements, { CanvasElement } from './CanvasElements';
 import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
+import { useConnections } from '@/hooks/useConnections';
 
 interface CanvasProps {
   className?: string;
@@ -23,6 +24,17 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     handleMouseMove,
     handleMouseUp,
   } = useCanvasInteraction();
+  
+  // Use connections hook
+  const {
+    connections,
+    isCreatingConnection,
+    activeConnection,
+    startConnection,
+    completeConnection,
+    cancelConnection,
+    removeConnection
+  } = useConnections();
   
   // Demo data - in a real app, this would come from state/context
   const elements: CanvasElement[] = [
@@ -54,8 +66,17 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
             transition: isDragging ? 'none' : 'transform 0.1s'
           }}
         >
-          {/* Render workspace elements */}
-          <CanvasElements elements={elements} />
+          {/* Render workspace elements with connections */}
+          <CanvasElements 
+            elements={elements} 
+            connections={connections}
+            isCreatingConnection={isCreatingConnection}
+            activeConnection={activeConnection}
+            onStartConnection={startConnection}
+            onCompleteConnection={completeConnection}
+            onCancelConnection={cancelConnection}
+            onRemoveConnection={removeConnection}
+          />
         </div>
       </CanvasContextMenu>
     </div>
