@@ -79,9 +79,11 @@ const AdSet: React.FC<AdSetProps> = ({
 
   // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
+    // Use the callback pattern to set the ref
     if (dragRef) {
-      // @ts-ignore - this is a hack to combine refs
-      dragRef.current = el;
+      // Using a TypeScript cast to handle the ref as a callback
+      const refCallback = dragRef as unknown as React.RefCallback<HTMLDivElement>;
+      refCallback(el);
     }
     if (elementRef) {
       elementRef(el);

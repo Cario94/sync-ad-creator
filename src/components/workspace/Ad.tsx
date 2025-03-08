@@ -5,6 +5,7 @@ import { ImageIcon } from 'lucide-react';
 import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
+import { MediaItem } from '@/hooks/useMediaLibrary';
 
 interface AdProps {
   name: string;
@@ -37,6 +38,7 @@ const Ad: React.FC<AdProps> = ({
     callToAction: 'learn_more',
     destinationUrl: 'https://',
     displayUrl: '',
+    imageUrl: '',
   });
 
   const { position, isDragging, dragRef, handleMouseDown } = useDragAndDrop({
@@ -68,9 +70,11 @@ const Ad: React.FC<AdProps> = ({
 
   // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
+    // Use the callback pattern to set the ref
     if (dragRef) {
-      // @ts-ignore - this is a hack to combine refs
-      dragRef.current = el;
+      // Using a TypeScript cast to handle the ref as a callback
+      const refCallback = dragRef as unknown as React.RefCallback<HTMLDivElement>;
+      refCallback(el);
     }
     if (elementRef) {
       elementRef(el);
@@ -115,6 +119,18 @@ const Ad: React.FC<AdProps> = ({
             <div className="font-medium text-sm">Ad</div>
           </div>
           <h3 className="font-semibold text-base">{adData.name}</h3>
+          
+          {/* Add image preview if one is selected */}
+          {adData.imageUrl && (
+            <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">
+              <img 
+                src={adData.imageUrl} 
+                alt={adData.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
           <div className="mt-2 text-xs text-muted-foreground">
             Format: Image • Status: Active
           </div>
