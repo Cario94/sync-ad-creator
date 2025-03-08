@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Users, Link } from 'lucide-react';
 import AdSetDialog from './dialogs/AdSetDialog';
@@ -58,12 +59,14 @@ const AdSet: React.FC<AdSetProps> = ({
   };
 
   const handleDelete = () => {
+    // In a real implementation, this would remove the ad set from the canvas
     console.log(`Delete ad set: ${adSetData.id}`);
   };
 
   const isActiveConnection = activeConnectionId === id;
   const isConnectionTarget = isCreatingConnection && !isActiveConnection;
 
+  // Handle connection operations
   const handleConnectionStart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onStartConnection) onStartConnection();
@@ -74,8 +77,10 @@ const AdSet: React.FC<AdSetProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
+  // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
     if (dragRef) {
+      // @ts-ignore - this is a hack to combine refs
       dragRef.current = el;
     }
     if (elementRef) {
@@ -129,6 +134,7 @@ const AdSet: React.FC<AdSetProps> = ({
             Budget: ${adSetData.budget}/day • Locations: {adSetData.locations.join(', ')}
           </div>
           
+          {/* Connection button */}
           <button
             className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}
