@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface Position {
   x: number;
@@ -22,12 +22,9 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState<Position>({ x: 0, y: 0 });
   const [elementOffset, setElementOffset] = useState<Position>({ x: 0, y: 0 });
-  
-  // Create a proper React.RefObject for the dragRef
   const dragRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only proceed if we have a valid ref to work with
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (dragRef.current) {
       const rect = dragRef.current.getBoundingClientRect();
       setElementOffset({
@@ -37,9 +34,9 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
       setStartPos({ x: e.clientX, y: e.clientY });
       setIsDragging(true);
     }
-  }, []);
+  };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleMouseMove = (e: MouseEvent) => {
     if (isDragging && dragRef.current) {
       const parent = dragRef.current.parentElement;
       if (parent) {
@@ -59,11 +56,11 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
         });
       }
     }
-  }, [isDragging, elementOffset]);
+  };
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = () => {
     setIsDragging(false);
-  }, []);
+  };
 
   useEffect(() => {
     if (isDragging) {
@@ -78,7 +75,7 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging]);
 
   return {
     position,

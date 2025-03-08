@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Users, Link } from 'lucide-react';
@@ -75,13 +74,9 @@ const AdSet: React.FC<AdSetProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Fixed combinedRef function to avoid directly modifying read-only current property
   const combinedRef = (el: HTMLDivElement | null) => {
-    // Call the dragRef function instead of directly assigning to current
     if (dragRef) {
-      // TypeScript doesn't allow direct assignment to ref.current
-      // Instead we're passing the element to any callback the dragRef might have
-      (dragRef as unknown as React.RefCallback<HTMLDivElement>)(el);
+      dragRef.current = el;
     }
     if (elementRef) {
       elementRef(el);
