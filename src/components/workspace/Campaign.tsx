@@ -1,5 +1,4 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Megaphone, Link } from 'lucide-react';
 import CampaignDialog from './dialogs/CampaignDialog';
@@ -58,14 +57,12 @@ const Campaign: React.FC<CampaignProps> = ({
   };
 
   const handleDelete = () => {
-    // In a real implementation, this would remove the campaign from the canvas
     console.log(`Delete campaign: ${campaignData.id}`);
   };
 
   const isActiveConnection = activeConnectionId === id;
   const isConnectionTarget = isCreatingConnection && !isActiveConnection;
 
-  // Handle connection operations
   const handleConnectionStart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onStartConnection) onStartConnection();
@@ -76,10 +73,8 @@ const Campaign: React.FC<CampaignProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
     if (dragRef) {
-      // @ts-ignore - this is a hack to combine refs
       dragRef.current = el;
     }
     if (elementRef) {
@@ -133,7 +128,6 @@ const Campaign: React.FC<CampaignProps> = ({
             Objective: {campaignData.objective.charAt(0).toUpperCase() + campaignData.objective.slice(1)}
           </div>
           
-          {/* Connection button */}
           <button
             className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}
