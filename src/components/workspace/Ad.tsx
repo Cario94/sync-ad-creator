@@ -11,9 +11,11 @@ interface AdProps {
   name: string;
   initialPosition?: { x: number; y: number };
   id?: string;
+  isSelected?: boolean;
   elementRef?: (element: HTMLDivElement | null) => void;
   isCreatingConnection?: boolean;
   activeConnectionId?: string;
+  onSelect?: () => void;
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
 }
@@ -22,9 +24,11 @@ const Ad: React.FC<AdProps> = ({
   name, 
   initialPosition = { x: 0, y: 0 },
   id = `ad-${Date.now()}`,
+  isSelected = false,
   elementRef,
   isCreatingConnection = false,
   activeConnectionId,
+  onSelect,
   onCompleteConnection,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,9 +45,15 @@ const Ad: React.FC<AdProps> = ({
     imageUrl: '',
   });
 
-  const { position, isDragging, dragRef, handleMouseDown } = useDragAndDrop({
-    initialPosition
+  const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
+    initialPosition,
+    onSelect,
   });
+
+  // Sync external selection state
+  React.useEffect(() => {
+    setIsSelected(isSelected);
+  }, [isSelected, setIsSelected]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -70,12 +80,7 @@ const Ad: React.FC<AdProps> = ({
 
   // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
-    // Use the callback pattern to set the ref
-    if (dragRef) {
-      // Using a TypeScript cast to handle the ref as a callback
-      const refCallback = dragRef as unknown as React.RefCallback<HTMLDivElement>;
-      refCallback(el);
-    }
+    dragRef(el);
     if (elementRef) {
       elementRef(el);
     }
@@ -89,6 +94,7 @@ const Ad: React.FC<AdProps> = ({
           className={cn(
             "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab",
             isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
+            isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
             "transition-shadow duration-200"
@@ -105,12 +111,8 @@ const Ad: React.FC<AdProps> = ({
               handleMouseDown(e);
             }
           }}
+          onClick={handleClick}
           onDoubleClick={handleDoubleClick}
-          onClick={(e) => {
-            if (isConnectionTarget) {
-              handleConnectionComplete(e);
-            }
-          }}
         >
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center">

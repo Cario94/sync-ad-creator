@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
 import CanvasElements, { CanvasElement } from './CanvasElements';
@@ -36,6 +36,17 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     removeConnection
   } = useConnections();
   
+  // Add state for selected element
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  
+  // Handle canvas background click to deselect
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Only deselect if the click is directly on the canvas (not on an element)
+    if (e.target === e.currentTarget) {
+      setSelectedElementId(null);
+    }
+  };
+  
   // Demo data - in a real app, this would come from state/context
   const elements: CanvasElement[] = [
     { id: 'campaign-1', type: 'campaign', name: 'Summer Sale 2023', position: { x: 100, y: 100 } },
@@ -60,6 +71,7 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onClick={handleCanvasClick}
           style={{
             transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
             transformOrigin: '0 0',
@@ -68,10 +80,12 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
         >
           {/* Render workspace elements with connections */}
           <CanvasElements 
-            elements={elements} 
+            elements={elements}
             connections={connections}
             isCreatingConnection={isCreatingConnection}
             activeConnection={activeConnection}
+            selectedElementId={selectedElementId}
+            onSelectElement={setSelectedElementId}
             onStartConnection={startConnection}
             onCompleteConnection={completeConnection}
             onCancelConnection={cancelConnection}

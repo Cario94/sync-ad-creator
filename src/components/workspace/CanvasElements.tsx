@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import Campaign from './Campaign';
 import AdSet from './AdSet';
@@ -25,6 +26,8 @@ interface CanvasElementsProps {
   connections: Connection[];
   isCreatingConnection: boolean;
   activeConnection: { sourceId: string; sourceType: 'campaign' | 'adset' | 'ad' } | null;
+  selectedElementId: string | null;
+  onSelectElement: (id: string | null) => void;
   onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCompleteConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCancelConnection: () => void;
@@ -36,6 +39,8 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   connections,
   isCreatingConnection,
   activeConnection,
+  selectedElementId,
+  onSelectElement,
   onStartConnection,
   onCompleteConnection,
   onCancelConnection,
@@ -125,6 +130,10 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     }
   };
 
+  const handleSelectElement = (id: string) => {
+    onSelectElement(id);
+  };
+
   return (
     <>
       <svg
@@ -166,6 +175,8 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
       </svg>
       
       {elements.map(element => {
+        const isSelected = selectedElementId === element.id;
+        
         const commonProps = {
           key: element.id,
           id: element.id,
@@ -173,7 +184,9 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
           initialPosition: element.position,
           elementRef: (el: HTMLDivElement | null) => handleElementRef(element.id, el),
           isCreatingConnection,
+          isSelected,
           activeConnectionId: activeConnection?.sourceId,
+          onSelect: () => handleSelectElement(element.id),
           onStartConnection: () => onStartConnection(element.id, element.type),
           onCompleteConnection: () => onCompleteConnection(element.id, element.type),
         };

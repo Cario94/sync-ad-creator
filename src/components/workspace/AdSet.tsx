@@ -10,9 +10,11 @@ interface AdSetProps {
   name: string;
   initialPosition?: { x: number; y: number };
   id?: string;
+  isSelected?: boolean;
   elementRef?: (element: HTMLDivElement | null) => void;
   isCreatingConnection?: boolean;
   activeConnectionId?: string;
+  onSelect?: () => void;
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
 }
@@ -21,9 +23,11 @@ const AdSet: React.FC<AdSetProps> = ({
   name, 
   initialPosition = { x: 0, y: 0 },
   id = `adset-${Date.now()}`,
+  isSelected = false,
   elementRef,
   isCreatingConnection = false,
   activeConnectionId,
+  onSelect,
   onStartConnection,
   onCompleteConnection,
 }) => {
@@ -44,9 +48,15 @@ const AdSet: React.FC<AdSetProps> = ({
     optimizationGoal: 'clicks'
   });
 
-  const { position, isDragging, dragRef, handleMouseDown } = useDragAndDrop({
-    initialPosition
+  const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
+    initialPosition,
+    onSelect,
   });
+
+  // Sync external selection state
+  React.useEffect(() => {
+    setIsSelected(isSelected);
+  }, [isSelected, setIsSelected]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -77,6 +87,14 @@ const AdSet: React.FC<AdSetProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
+  // Set up the combined ref for both dragging and positioning
+  const combinedRef = (el: HTMLDivElement | null) => {
+    dragRef(el);
+    if (elementRef) {
+      elementRef(el);
+    }
+  };
+
   return (
     <>
       <CanvasContextMenu 
@@ -85,19 +103,11 @@ const AdSet: React.FC<AdSetProps> = ({
         elementType="adset"
       >
         <div
-          ref={(el) => {
-            // Pass the element to dragRef function if it exists
-            if (dragRef && typeof dragRef === 'function') {
-              dragRef(el);
-            }
-            // Also pass to elementRef if provided
-            if (elementRef) {
-              elementRef(el);
-            }
-          }}
+          ref={combinedRef}
           className={cn(
             "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-accent-foreground/30 cursor-grab",
             isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
+            isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
             "transition-shadow duration-200"
@@ -114,12 +124,8 @@ const AdSet: React.FC<AdSetProps> = ({
               handleMouseDown(e);
             }
           }}
+          onClick={handleClick}
           onDoubleClick={handleDoubleClick}
-          onClick={(e) => {
-            if (isConnectionTarget) {
-              handleConnectionComplete(e);
-            }
-          }}
         >
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-full bg-accent-foreground/10 flex items-center justify-center">
