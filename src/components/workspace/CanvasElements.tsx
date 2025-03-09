@@ -26,8 +26,8 @@ interface CanvasElementsProps {
   connections: Connection[];
   isCreatingConnection: boolean;
   activeConnection: { sourceId: string; sourceType: 'campaign' | 'adset' | 'ad' } | null;
-  selectedElementId: string | null;
-  onSelectElement: (id: string | null) => void;
+  selectedElementIds: string[];
+  onSelectElement: (id: string) => void;
   onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCompleteConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCancelConnection: () => void;
@@ -40,7 +40,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   connections,
   isCreatingConnection,
   activeConnection,
-  selectedElementId,
+  selectedElementIds,
   onSelectElement,
   onStartConnection,
   onCompleteConnection,
@@ -163,15 +163,17 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
             const sourceX = sourceElement.x + sourceElement.width;
             const sourceY = sourceElement.y + sourceElement.height / 2;
             
+            // Create a curved path for the in-progress connection
+            const midX = (sourceX + mousePosition.x) / 2;
+            const pathData = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${mousePosition.y}, ${mousePosition.x} ${mousePosition.y}`;
+            
             return (
-              <line
-                x1={sourceX}
-                y1={sourceY}
-                x2={mousePosition.x}
-                y2={mousePosition.y}
+              <path
+                d={pathData}
                 stroke="var(--primary)"
                 strokeWidth={2}
                 strokeDasharray="5,5"
+                fill="none"
               />
             );
           }
@@ -181,7 +183,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
       </svg>
       
       {elements.map(element => {
-        const isSelected = selectedElementId === element.id;
+        const isSelected = selectedElementIds.includes(element.id);
         
         const commonProps = {
           key: element.id,

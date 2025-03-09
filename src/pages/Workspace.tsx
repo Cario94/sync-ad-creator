@@ -7,7 +7,6 @@ import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import { 
   Menu, 
   X, 
-  Home, 
   LayoutDashboard, 
   Image, 
   Settings, 
@@ -17,10 +16,14 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { MediaItem } from '@/hooks/useMediaLibrary';
+import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
+import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 
 const Workspace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -59,15 +62,6 @@ const Workspace = () => {
         
         <nav className="flex-1 px-4 py-2">
           <div className="space-y-1">
-            <Link to="/">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-muted-foreground hover:text-foreground"
-              >
-                <Home className="mr-3 h-5 w-5" />
-                Home
-              </Button>
-            </Link>
             <Button 
               variant="secondary" 
               className="w-full justify-start font-medium"
@@ -86,6 +80,7 @@ const Workspace = () => {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-muted-foreground hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
             >
               <Settings className="mr-3 h-5 w-5" />
               Settings
@@ -94,7 +89,7 @@ const Workspace = () => {
         </nav>
         
         <div className="p-4 border-t border-border">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center space-x-3 mb-4 cursor-pointer" onClick={() => setProfileOpen(true)}>
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
               <User className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -147,11 +142,21 @@ const Workspace = () => {
         </div>
       </div>
 
-      {/* Media Library Dialog */}
+      {/* Dialogs */}
       <MediaLibraryDialog
         open={mediaLibraryOpen}
         onOpenChange={setMediaLibraryOpen}
         onSelect={handleMediaSelect}
+      />
+      
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
+      
+      <ProfileDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
       />
     </div>
   );

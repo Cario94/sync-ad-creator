@@ -1,11 +1,17 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useConnections } from './useConnections';
 
 interface UseCanvasInteractionOptions {
   minScale?: number;
   maxScale?: number;
+}
+
+export interface SelectionRect {
+  startX: number;
+  startY: number;
+  width: number;
+  height: number;
 }
 
 export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) => {
@@ -21,6 +27,11 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const [history, setHistory] = useState<any[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
+  // Selection rectangle state
+  const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState({ x: 0, y: 0 });
+  
   // Handle zoom with buttons
   const handleZoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.1, maxScale));
@@ -32,63 +43,111 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   
   // Handle canvas dragging (panning) with space + mouse
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // If space is pressed, handle canvas dragging
     if (spacePressed) {
       setIsDragging(true);
       setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      return;
     }
-  }, [spacePressed, pan]);
+    
+    // If we're not panning and the click is directly on the canvas background
+    // (not a child element), start selection
+    if (e.target === e.currentTarget) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = (e.clientX - rect.left) / scale - pan.x;
+        const y = (e.clientY - rect.top) / scale - pan.y;
+        setSelectionStart({ x, y });
+        setSelectionRect({ startX: x, startY: y, width: 0, height: 0 });
+        setIsSelecting(true);
+      }
+    }
+  }, [spacePressed, pan, scale]);
   
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Handle canvas dragging
     if (isDragging && spacePressed) {
       setPan({
         x: e.clientX - startPan.x,
         y: e.clientY - startPan.y
       });
+      return;
     }
-  }, [isDragging, spacePressed, startPan]);
+    
+    // Handle selection rectangle
+    if (isSelecting && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const currentX = (e.clientX - rect.left) / scale - pan.x;
+      const currentY = (e.clientY - rect.top) / scale - pan.y;
+      
+      setSelectionRect({
+        startX: Math.min(selectionStart.x, currentX),
+        startY: Math.min(selectionStart.y, currentY),
+        width: Math.abs(currentX - selectionStart.x),
+        height: Math.abs(currentY - selectionStart.y)
+      });
+    }
+  }, [isDragging, spacePressed, startPan, isSelecting, selectionStart, scale, pan]);
   
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     setIsDragging(false);
-  }, []);
+    
+    // Finish selection operation
+    if (isSelecting) {
+      setIsSelecting(false);
+      // The actual selection logic will be handled in the component that uses this hook
+    }
+  }, [isSelecting]);
 
   // Handle clipboard operations
-  const handleCopy = useCallback((selectedElement: any) => {
-    if (selectedElement) {
-      setClipboardItem(selectedElement);
-      toast.success('Copied to clipboard');
+  const handleCopy = useCallback((selectedElements: any[]) => {
+    if (selectedElements.length > 0) {
+      setClipboardItem(selectedElements);
+      toast.success(`Copied ${selectedElements.length} element(s) to clipboard`);
     }
   }, []);
 
   const handlePaste = useCallback(() => {
     if (clipboardItem) {
-      // Return the clipboard item with a new ID and slightly offset position
-      const newItem = {
-        ...clipboardItem,
-        id: `${clipboardItem.type}-${Date.now()}`,
-        position: {
-          x: clipboardItem.position.x + 20,
-          y: clipboardItem.position.y + 20
-        }
-      };
-      toast.success('Pasted from clipboard');
-      return newItem;
+      // Return the clipboard items with new IDs and slightly offset positions
+      const newItems = Array.isArray(clipboardItem) 
+        ? clipboardItem.map(item => ({
+            ...item,
+            id: `${item.type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            position: {
+              x: item.position.x + 20,
+              y: item.position.y + 20
+            }
+          }))
+        : [{
+            ...clipboardItem,
+            id: `${clipboardItem.type}-${Date.now()}`,
+            position: {
+              x: clipboardItem.position.x + 20,
+              y: clipboardItem.position.y + 20
+            }
+          }];
+      
+      toast.success(`Pasted ${newItems.length} element(s) from clipboard`);
+      return newItems;
     }
     return null;
   }, [clipboardItem]);
 
-  const handleDuplicate = useCallback((selectedElement: any) => {
-    if (selectedElement) {
-      // Create a duplicate with a new ID and slightly offset position
-      const duplicatedItem = {
-        ...selectedElement,
-        id: `${selectedElement.type}-${Date.now()}`,
+  const handleDuplicate = useCallback((selectedElements: any[]) => {
+    if (selectedElements.length > 0) {
+      // Create duplicates with new IDs and slightly offset positions
+      const duplicatedItems = selectedElements.map(item => ({
+        ...item,
+        id: `${item.type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         position: {
-          x: selectedElement.position.x + 20,
-          y: selectedElement.position.y + 20
+          x: item.position.x + 20,
+          y: item.position.y + 20
         }
-      };
-      toast.success('Duplicated element');
-      return duplicatedItem;
+      }));
+      
+      toast.success(`Duplicated ${duplicatedItems.length} element(s)`);
+      return duplicatedItems;
     }
     return null;
   }, []);
@@ -214,6 +273,8 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     isDragging,
     pan,
     spacePressed,
+    selectionRect,
+    isSelecting,
     handleZoomIn,
     handleZoomOut,
     handleMouseDown,

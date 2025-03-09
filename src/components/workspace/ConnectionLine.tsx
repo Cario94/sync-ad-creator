@@ -1,7 +1,7 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Connection } from '@/hooks/useConnections';
-import { ArrowRightIcon, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface ElementPosition {
   id: string;
@@ -22,7 +22,6 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
   elementPositions,
   onRemove
 }) => {
-  const lineRef = useRef<SVGLineElement>(null);
   const [hover, setHover] = useState(false);
   
   const sourceElement = elementPositions.find(el => el.id === connection.sourceId);
@@ -36,12 +35,15 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
   const targetX = targetElement.x;
   const targetY = targetElement.y + targetElement.height / 2;
   
-  // Calculate midpoint for arrow and delete button
-  const midX = sourceX + (targetX - sourceX) / 2;
-  const midY = sourceY + (targetY - sourceY) / 2;
+  // Calculate control points for the curved line
+  const midX = (sourceX + targetX) / 2;
   
-  // Calculate angle for the arrow rotation
-  const angle = Math.atan2(targetY - sourceY, targetX - sourceX) * (180 / Math.PI);
+  // Create the path for the curved line
+  const pathData = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
+  
+  // Calculate point for delete button (near the midpoint of the curve)
+  const deleteButtonX = midX;
+  const deleteButtonY = (sourceY + targetY) / 2 - 15; // Offset above the midpoint
   
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -54,48 +56,25 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <line
-        ref={lineRef}
-        x1={sourceX}
-        y1={sourceY}
-        x2={targetX}
-        y2={targetY}
+      <path
+        d={pathData}
+        fill="none"
         stroke={hover ? "var(--primary)" : "var(--muted-foreground)"}
         strokeWidth={2}
         strokeDasharray={hover ? "none" : "5,5"}
       />
       
-      {/* Arrow in the middle */}
-      <g 
-        transform={`translate(${midX}, ${midY}) rotate(${angle})`}
-        style={{ cursor: 'pointer' }}
-      >
-        <circle 
-          r={hover ? 14 : 12}
-          fill={hover ? "var(--primary-foreground)" : "white"}
-          stroke={hover ? "var(--primary)" : "var(--muted-foreground)"}
-          strokeWidth={1.5}
-        />
-        <foreignObject 
-          x={-8} 
-          y={-8} 
-          width={16} 
-          height={16}
-          style={{ pointerEvents: 'none' }}
-        >
-          <div className="h-full w-full flex items-center justify-center">
-            <ArrowRightIcon 
-              size={14} 
-              className={hover ? "text-primary" : "text-muted-foreground"} 
-            />
-          </div>
-        </foreignObject>
-      </g>
+      {/* Arrow head at the target */}
+      <polygon 
+        points={`${targetX-10},${targetY-5} ${targetX},${targetY} ${targetX-10},${targetY+5}`}
+        fill={hover ? "var(--primary)" : "var(--muted-foreground)"}
+        stroke="none"
+      />
       
       {/* Delete button (only shows on hover) */}
       {hover && (
         <g 
-          transform={`translate(${midX}, ${midY - 25})`}
+          transform={`translate(${deleteButtonX}, ${deleteButtonY})`}
           onClick={handleRemove}
           style={{ cursor: 'pointer' }}
         >

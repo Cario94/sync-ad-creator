@@ -33,6 +33,11 @@ const useDragAndDrop = ({
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const movedRef = useRef(false);
 
+  // Update position when initialPosition changes (for multi-select transforms)
+  useEffect(() => {
+    setPosition(initialPosition);
+  }, [initialPosition]);
+
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!movedRef.current) {
