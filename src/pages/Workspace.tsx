@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Canvas from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
+import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import { 
   Menu, 
   X, 
@@ -15,9 +16,11 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { MediaItem } from '@/hooks/useMediaLibrary';
 
 const Workspace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -27,6 +30,14 @@ const Workspace = () => {
       description: "You have been successfully logged out."
     });
     navigate('/');
+  };
+
+  const handleMediaSelect = (media: MediaItem) => {
+    toast({
+      title: "Media selected",
+      description: `Selected: ${media.name}`
+    });
+    // This would typically pass the selected media to the current element being edited
   };
 
   return (
@@ -67,6 +78,7 @@ const Workspace = () => {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-muted-foreground hover:text-foreground"
+              onClick={() => setMediaLibraryOpen(true)}
             >
               <Image className="mr-3 h-5 w-5" />
               Media Library
@@ -134,6 +146,13 @@ const Workspace = () => {
           <Canvas />
         </div>
       </div>
+
+      {/* Media Library Dialog */}
+      <MediaLibraryDialog
+        open={mediaLibraryOpen}
+        onOpenChange={setMediaLibraryOpen}
+        onSelect={handleMediaSelect}
+      />
     </div>
   );
 };
