@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Megaphone, Link } from 'lucide-react';
 import CampaignDialog from './dialogs/CampaignDialog';
@@ -17,6 +16,7 @@ interface CampaignProps {
   onSelect?: () => void;
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
+  onUpdatePosition?: (position: { x: number; y: number }) => void;
 }
 
 const Campaign: React.FC<CampaignProps> = ({ 
@@ -30,6 +30,7 @@ const Campaign: React.FC<CampaignProps> = ({
   onSelect,
   onStartConnection,
   onCompleteConnection,
+  onUpdatePosition,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [campaignData, setCampaignData] = useState({
@@ -53,9 +54,16 @@ const Campaign: React.FC<CampaignProps> = ({
   });
 
   // Sync external selection state
-  React.useEffect(() => {
+  useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
+
+  // Sync position with parent component when dragging
+  useEffect(() => {
+    if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
+      onUpdatePosition(position);
+    }
+  }, [position, initialPosition, onUpdatePosition]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();

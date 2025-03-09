@@ -32,6 +32,7 @@ interface CanvasElementsProps {
   onCompleteConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCancelConnection: () => void;
   onRemoveConnection: (id: string) => void;
+  onUpdatePosition: (id: string, position: { x: number; y: number }) => void;
 }
 
 const CanvasElements: React.FC<CanvasElementsProps> = ({ 
@@ -44,7 +45,8 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   onStartConnection,
   onCompleteConnection,
   onCancelConnection,
-  onRemoveConnection
+  onRemoveConnection,
+  onUpdatePosition
 }) => {
   const [elementPositions, setElementPositions] = useState<ElementPosition[]>([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -134,6 +136,10 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     onSelectElement(id);
   };
 
+  const handleUpdatePosition = (id: string, position: { x: number; y: number }) => {
+    onUpdatePosition(id, position);
+  };
+
   return (
     <>
       <svg
@@ -189,6 +195,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
           onSelect: () => handleSelectElement(element.id),
           onStartConnection: () => onStartConnection(element.id, element.type),
           onCompleteConnection: () => onCompleteConnection(element.id, element.type),
+          onUpdatePosition: (position: { x: number; y: number }) => handleUpdatePosition(element.id, position),
         };
         
         if (element.type === 'campaign') {

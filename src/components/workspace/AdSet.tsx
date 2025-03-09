@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Users, Link } from 'lucide-react';
 import AdSetDialog from './dialogs/AdSetDialog';
@@ -17,6 +16,7 @@ interface AdSetProps {
   onSelect?: () => void;
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
+  onUpdatePosition?: (position: { x: number; y: number }) => void;
 }
 
 const AdSet: React.FC<AdSetProps> = ({ 
@@ -30,6 +30,7 @@ const AdSet: React.FC<AdSetProps> = ({
   onSelect,
   onStartConnection,
   onCompleteConnection,
+  onUpdatePosition,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adSetData, setAdSetData] = useState({
@@ -54,9 +55,16 @@ const AdSet: React.FC<AdSetProps> = ({
   });
 
   // Sync external selection state
-  React.useEffect(() => {
+  useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
+
+  // Sync position with parent component when dragging
+  useEffect(() => {
+    if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
+      onUpdatePosition(position);
+    }
+  }, [position, initialPosition, onUpdatePosition]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();

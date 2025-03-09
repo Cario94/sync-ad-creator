@@ -1,11 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { ImageIcon } from 'lucide-react';
 import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
-import { MediaItem } from '@/hooks/useMediaLibrary';
 
 interface AdProps {
   name: string;
@@ -16,8 +14,8 @@ interface AdProps {
   isCreatingConnection?: boolean;
   activeConnectionId?: string;
   onSelect?: () => void;
-  onStartConnection?: () => void;
   onCompleteConnection?: () => void;
+  onUpdatePosition?: (position: { x: number; y: number }) => void;
 }
 
 const Ad: React.FC<AdProps> = ({ 
@@ -30,6 +28,7 @@ const Ad: React.FC<AdProps> = ({
   activeConnectionId,
   onSelect,
   onCompleteConnection,
+  onUpdatePosition,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adData, setAdData] = useState({
@@ -51,9 +50,16 @@ const Ad: React.FC<AdProps> = ({
   });
 
   // Sync external selection state
-  React.useEffect(() => {
+  useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
+
+  // Sync position with parent component when dragging
+  useEffect(() => {
+    if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
+      onUpdatePosition(position);
+    }
+  }, [position, initialPosition, onUpdatePosition]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -122,7 +128,6 @@ const Ad: React.FC<AdProps> = ({
           </div>
           <h3 className="font-semibold text-base">{adData.name}</h3>
           
-          {/* Add image preview if one is selected */}
           {adData.imageUrl && (
             <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">
               <img 

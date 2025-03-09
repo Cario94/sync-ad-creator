@@ -31,18 +31,21 @@ const useDragAndDrop = ({
   const [startPos, setStartPos] = useState<Position>({ x: 0, y: 0 });
   const [elementOffset, setElementOffset] = useState<Position>({ x: 0, y: 0 });
   const nodeRef = useRef<HTMLDivElement | null>(null);
-  const dragTimeoutRef = useRef<number | null>(null);
   const movedRef = useRef(false);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Select this element
-    setIsSelected(true);
-    if (onSelect) onSelect();
+    if (!movedRef.current) {
+      setIsSelected(true);
+      if (onSelect) onSelect();
+    }
+    movedRef.current = false;
   }, [onSelect]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.button !== 0) return; // Only left mouse button
+    
     if (nodeRef.current) {
       const rect = nodeRef.current.getBoundingClientRect();
       setElementOffset({
@@ -51,52 +54,37 @@ const useDragAndDrop = ({
       });
       setStartPos({ x: e.clientX, y: e.clientY });
       
-      // Set a timeout to determine if it's a drag operation
+      // Immediate start to dragging
       movedRef.current = false;
-      dragTimeoutRef.current = window.setTimeout(() => {
-        setIsDragging(true);
-      }, 150); // Small delay to differentiate click from drag
+      setIsDragging(true);
     }
   }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    // If the mouse has moved more than a few pixels, consider it a drag operation
-    if (dragTimeoutRef.current && 
-        (Math.abs(e.clientX - startPos.x) > 5 || Math.abs(e.clientY - startPos.y) > 5)) {
-      movedRef.current = true;
-      clearTimeout(dragTimeoutRef.current);
-      dragTimeoutRef.current = null;
-      setIsDragging(true);
-    }
+    if (!isDragging || !nodeRef.current) return;
     
-    if (isDragging && nodeRef.current) {
-      const parent = nodeRef.current.parentElement;
-      if (parent) {
-        const parentRect = parent.getBoundingClientRect();
-        
-        // Calculate the new position relative to the parent
-        const newX = e.clientX - parentRect.left - elementOffset.x;
-        const newY = e.clientY - parentRect.top - elementOffset.y;
-        
-        // Ensure the element stays within the parent bounds
-        const maxX = parentRect.width - nodeRef.current.offsetWidth;
-        const maxY = parentRect.height - nodeRef.current.offsetHeight;
-        
-        setPosition({
-          x: Math.max(0, Math.min(newX, maxX)),
-          y: Math.max(0, Math.min(newY, maxY))
-        });
-      }
+    movedRef.current = true;
+    
+    const parent = nodeRef.current.parentElement;
+    if (parent) {
+      const parentRect = parent.getBoundingClientRect();
+      
+      // Calculate the new position relative to the parent
+      const newX = e.clientX - parentRect.left - elementOffset.x;
+      const newY = e.clientY - parentRect.top - elementOffset.y;
+      
+      // Ensure the element stays within the parent bounds
+      const maxX = parentRect.width - nodeRef.current.offsetWidth;
+      const maxY = parentRect.height - nodeRef.current.offsetHeight;
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
     }
-  }, [isDragging, elementOffset, startPos.x, startPos.y]);
+  }, [isDragging, elementOffset]);
 
-  const handleMouseUp = useCallback((e: MouseEvent) => {
-    // Clear any pending drag timeout
-    if (dragTimeoutRef.current) {
-      clearTimeout(dragTimeoutRef.current);
-      dragTimeoutRef.current = null;
-    }
-    
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
@@ -106,22 +94,22 @@ const useDragAndDrop = ({
   }, []);
 
   useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      handleMouseMove(e);
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      handleMouseUp();
+    };
+
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
     }
     
     return () => {
-      // Clean up event listeners and timeouts
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      
-      if (dragTimeoutRef.current) {
-        clearTimeout(dragTimeoutRef.current);
-      }
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
