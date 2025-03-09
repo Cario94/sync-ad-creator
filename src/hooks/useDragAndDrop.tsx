@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface Position {
   x: number;
@@ -13,7 +13,7 @@ interface UseDragAndDropProps {
 interface UseDragAndDropResult {
   position: Position;
   isDragging: boolean;
-  dragRef: React.RefObject<HTMLDivElement>;
+  dragRef: (node: HTMLDivElement | null) => void;
   handleMouseDown: (e: React.MouseEvent) => void;
 }
 
@@ -22,11 +22,11 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState<Position>({ x: 0, y: 0 });
   const [elementOffset, setElementOffset] = useState<Position>({ x: 0, y: 0 });
-  const dragRef = useRef<HTMLDivElement>(null);
+  const nodeRef = useRef<HTMLDivElement | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (dragRef.current) {
-      const rect = dragRef.current.getBoundingClientRect();
+    if (nodeRef.current) {
+      const rect = nodeRef.current.getBoundingClientRect();
       setElementOffset({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
@@ -36,9 +36,9 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && dragRef.current) {
-      const parent = dragRef.current.parentElement;
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging && nodeRef.current) {
+      const parent = nodeRef.current.parentElement;
       if (parent) {
         const parentRect = parent.getBoundingClientRect();
         
@@ -47,8 +47,8 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
         const newY = e.clientY - parentRect.top - elementOffset.y;
         
         // Ensure the element stays within the parent bounds
-        const maxX = parentRect.width - dragRef.current.offsetWidth;
-        const maxY = parentRect.height - dragRef.current.offsetHeight;
+        const maxX = parentRect.width - nodeRef.current.offsetWidth;
+        const maxY = parentRect.height - nodeRef.current.offsetHeight;
         
         setPosition({
           x: Math.max(0, Math.min(newX, maxX)),
@@ -56,11 +56,16 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
         });
       }
     }
-  };
+  }, [isDragging, elementOffset]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
+
+  // Set up ref callback
+  const dragRef = useCallback((node: HTMLDivElement | null) => {
+    nodeRef.current = node;
+  }, []);
 
   useEffect(() => {
     if (isDragging) {
@@ -75,7 +80,7 @@ const useDragAndDrop = ({ initialPosition = { x: 0, y: 0 } }: UseDragAndDropProp
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return {
     position,

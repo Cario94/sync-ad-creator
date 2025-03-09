@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import useDragAndDrop from '@/hooks/useDragAndDrop';
 import { Users, Link } from 'lucide-react';
 import AdSetDialog from './dialogs/AdSetDialog';
@@ -77,19 +77,6 @@ const AdSet: React.FC<AdSetProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Set up the combined ref for both dragging and positioning
-  const combinedRef = (el: HTMLDivElement | null) => {
-    // Use the callback pattern to set the ref
-    if (dragRef) {
-      // Using a TypeScript cast to handle the ref as a callback
-      const refCallback = dragRef as unknown as React.RefCallback<HTMLDivElement>;
-      refCallback(el);
-    }
-    if (elementRef) {
-      elementRef(el);
-    }
-  };
-
   return (
     <>
       <CanvasContextMenu 
@@ -98,7 +85,16 @@ const AdSet: React.FC<AdSetProps> = ({
         elementType="adset"
       >
         <div
-          ref={combinedRef}
+          ref={(el) => {
+            // Pass the element to dragRef function if it exists
+            if (dragRef && typeof dragRef === 'function') {
+              dragRef(el);
+            }
+            // Also pass to elementRef if provided
+            if (elementRef) {
+              elementRef(el);
+            }
+          }}
           className={cn(
             "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-accent-foreground/30 cursor-grab",
             isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
