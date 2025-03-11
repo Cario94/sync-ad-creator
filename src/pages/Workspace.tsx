@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Canvas from '@/components/workspace/Canvas';
@@ -11,13 +10,15 @@ import {
   Image, 
   Settings, 
   LogOut,
-  User
+  User,
+  DraftingCompass
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { MediaItem } from '@/hooks/useMediaLibrary';
 import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Workspace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -41,6 +42,14 @@ const Workspace = () => {
       description: `Selected: ${media.name}`
     });
     // This would typically pass the selected media to the current element being edited
+  };
+
+  const handleTidyLayout = () => {
+    toast({
+      title: "Tidy Layout",
+      description: "Organizing elements for better visibility"
+    });
+    // Implementation for tidying layout would go here
   };
 
   return (
@@ -137,8 +146,27 @@ const Workspace = () => {
         </div>
         
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
           <Canvas />
+          
+          {/* Tidy Layout Button - Bottom Right Corner */}
+          <div className="absolute bottom-20 right-4 z-10">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={handleTidyLayout}
+                  className="rounded-full shadow-md h-10 w-10"
+                >
+                  <DraftingCompass className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Tidy Layout</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
