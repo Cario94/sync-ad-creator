@@ -4,14 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Plus,
-  LayoutGrid,
   Image,
   Settings,
   Undo,
   Redo,
   Facebook,
   ChevronDown,
-  DraftingCompass
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -23,6 +21,7 @@ import {
 
 const ToolBar: React.FC = () => {
   const handleAction = (action: string) => {
+    console.log(`Action triggered: ${action}`);
     toast(`${action} clicked`, {
       description: 'This functionality will be available in the full version'
     });
