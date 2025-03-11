@@ -39,7 +39,7 @@ const ToolBar: React.FC = () => {
       <div className="flex items-center space-x-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-1 bg-white bg-opacity-90">
+            <Button variant="outline" className="gap-1 bg-white bg-opacity-90" onClick={() => handleAction("Select Ad Account")}>
               <Facebook className="h-4 w-4 text-blue-600" />
               <span className="hidden sm:inline">Ad Account</span>
               <ChevronDown className="h-3 w-3 opacity-70" />
