@@ -19,6 +19,12 @@ export const useConnections = (initialConnections: Connection[] = []) => {
   } | null>(null);
 
   const startConnection = useCallback((sourceId: string, sourceType: 'campaign' | 'adset' | 'ad') => {
+    // Only campaigns and adsets can create connections
+    if (sourceType === 'ad') {
+      toast.error("Ads cannot create connections");
+      return;
+    }
+    
     setIsCreatingConnection(true);
     setActiveConnection({ sourceId, sourceType });
   }, []);
@@ -34,13 +40,19 @@ export const useConnections = (initialConnections: Connection[] = []) => {
       return;
     }
 
-    // Only allow connections from campaign → adset or adset → ad
+    // Enforce connection rules:
+    // - Campaigns can only connect to Ad Sets
+    // - Ad Sets can only connect to Ads
+    // - Ads cannot connect to anything (handled in startConnection)
     const isValidConnection = 
       (activeConnection.sourceType === 'campaign' && targetType === 'adset') ||
       (activeConnection.sourceType === 'adset' && targetType === 'ad');
 
     if (!isValidConnection) {
-      toast.error("Invalid connection type. Campaigns connect to Ad Sets, and Ad Sets connect to Ads");
+      const sourceLabel = activeConnection.sourceType === 'campaign' ? 'Campaigns' : 'Ad Sets';
+      const validTargetLabel = activeConnection.sourceType === 'campaign' ? 'Ad Sets' : 'Ads';
+      
+      toast.error(`${sourceLabel} can only connect to ${validTargetLabel}`);
       setIsCreatingConnection(false);
       setActiveConnection(null);
       return;

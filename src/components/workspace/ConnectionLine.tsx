@@ -29,21 +29,26 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
   
   if (!sourceElement || !targetElement) return null;
   
+  // Calculate start and end points with improved positioning
   const sourceX = sourceElement.x + sourceElement.width;
   const sourceY = sourceElement.y + sourceElement.height / 2;
   
   const targetX = targetElement.x;
   const targetY = targetElement.y + targetElement.height / 2;
   
-  // Calculate control points for the curved line
+  // Adjust control points for a smoother curve
+  const dx = Math.abs(targetX - sourceX);
+  const controlOffsetX = Math.min(dx * 0.5, 150);
+  
+  // Create the path for the curved line with better curvature
+  const pathData = `M ${sourceX} ${sourceY} 
+                    C ${sourceX + controlOffsetX} ${sourceY}, 
+                      ${targetX - controlOffsetX} ${targetY}, 
+                      ${targetX} ${targetY}`;
+  
+  // Calculate midpoint for delete button
   const midX = (sourceX + targetX) / 2;
-  
-  // Create the path for the curved line
-  const pathData = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
-  
-  // Calculate point for delete button (near the midpoint of the curve)
-  const deleteButtonX = midX;
-  const deleteButtonY = (sourceY + targetY) / 2 - 15; // Offset above the midpoint
+  const midY = (sourceY + targetY) / 2 - 15;
   
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -56,6 +61,7 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
+      {/* Base connection path */}
       <path
         d={pathData}
         fill="none"
@@ -64,9 +70,9 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
         strokeDasharray={hover ? "none" : "5,5"}
       />
       
-      {/* Arrow head at the target */}
+      {/* Improved arrow head at the target */}
       <polygon 
-        points={`${targetX-10},${targetY-5} ${targetX},${targetY} ${targetX-10},${targetY+5}`}
+        points={`${targetX},${targetY} ${targetX-10},${targetY-6} ${targetX-5},${targetY} ${targetX-10},${targetY+6}`}
         fill={hover ? "var(--primary)" : "var(--muted-foreground)"}
         stroke="none"
       />
@@ -74,7 +80,7 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       {/* Delete button (only shows on hover) */}
       {hover && (
         <g 
-          transform={`translate(${deleteButtonX}, ${deleteButtonY})`}
+          transform={`translate(${midX}, ${midY})`}
           onClick={handleRemove}
           style={{ cursor: 'pointer' }}
         >
