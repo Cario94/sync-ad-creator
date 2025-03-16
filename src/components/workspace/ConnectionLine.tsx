@@ -50,6 +50,10 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
   const midX = (sourceX + targetX) / 2;
   const midY = (sourceY + targetY) / 2 - 15;
   
+  // Calculate points for arrow tail at the source
+  const tailLength = 10;
+  const tailPoints = `${sourceX},${sourceY} ${sourceX-tailLength},${sourceY-6} ${sourceX-5},${sourceY} ${sourceX-tailLength},${sourceY+6}`;
+  
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     onRemove(connection.id);
@@ -68,6 +72,13 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
         stroke={hover ? "var(--primary)" : "var(--muted-foreground)"}
         strokeWidth={2}
         strokeDasharray={hover ? "none" : "5,5"}
+      />
+      
+      {/* Arrow tail at the source */}
+      <polygon 
+        points={tailPoints}
+        fill={hover ? "var(--primary)" : "var(--muted-foreground)"}
+        stroke="none"
       />
       
       {/* Improved arrow head at the target */}
