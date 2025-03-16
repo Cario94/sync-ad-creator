@@ -1,25 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import Campaign from './Campaign';
-import AdSet from './AdSet';
-import Ad from './Ad';
-import ConnectionLine from './ConnectionLine';
 import { Connection } from '@/hooks/useConnections';
-
-export interface CanvasElement {
-  id: string;
-  type: 'campaign' | 'adset' | 'ad';
-  name: string;
-  position: { x: number; y: number };
-}
-
-interface ElementPosition {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import ConnectionsRenderer from './ConnectionsRenderer';
+import ElementsRenderer from './ElementsRenderer';
+import { CanvasElement, ElementPosition } from './types/canvas';
 
 interface CanvasElementsProps {
   elements: CanvasElement[];
@@ -53,6 +37,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   const elementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Handle mouse movement for dynamic connection creation
   useEffect(() => {
     if (!isCreatingConnection || !svgRef.current) return;
 
@@ -79,6 +64,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     };
   }, [isCreatingConnection, onCancelConnection]);
 
+  // Track element positions for drawing connections
   useEffect(() => {
     const updateElementPositions = () => {
       const positions: ElementPosition[] = [];
@@ -124,20 +110,13 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     };
   }, [elements]);
 
+  // Handle element references
   const handleElementRef = (id: string, element: HTMLDivElement | null) => {
     if (element) {
       elementsRef.current.set(id, element);
     } else {
       elementsRef.current.delete(id);
     }
-  };
-
-  const handleSelectElement = (id: string) => {
-    onSelectElement(id);
-  };
-
-  const handleUpdatePosition = (id: string, position: { x: number; y: number }) => {
-    onUpdatePosition(id, position);
   };
 
   return (
@@ -147,68 +126,27 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
         className="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
         style={{ overflow: 'visible' }}
       >
-        {connections.map(connection => (
-          <ConnectionLine
-            key={connection.id}
-            connection={connection}
-            elementPositions={elementPositions}
-            onRemove={onRemoveConnection}
-          />
-        ))}
-        
-        {isCreatingConnection && activeConnection && (() => {
-          const sourceElement = elementPositions.find(el => el.id === activeConnection.sourceId);
-          
-          if (sourceElement) {
-            const sourceX = sourceElement.x + sourceElement.width;
-            const sourceY = sourceElement.y + sourceElement.height / 2;
-            
-            // Create a curved path for the in-progress connection
-            const midX = (sourceX + mousePosition.x) / 2;
-            const pathData = `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${mousePosition.y}, ${mousePosition.x} ${mousePosition.y}`;
-            
-            return (
-              <path
-                d={pathData}
-                stroke="var(--primary)"
-                strokeWidth={2}
-                strokeDasharray="5,5"
-                fill="none"
-              />
-            );
-          }
-          
-          return null;
-        })()}
+        <ConnectionsRenderer 
+          connections={connections}
+          elementPositions={elementPositions}
+          isCreatingConnection={isCreatingConnection}
+          activeConnection={activeConnection}
+          mousePosition={mousePosition}
+          onRemoveConnection={onRemoveConnection}
+        />
       </svg>
       
-      {elements.map(element => {
-        const isSelected = selectedElementIds.includes(element.id);
-        
-        const commonProps = {
-          key: element.id,
-          id: element.id,
-          name: element.name,
-          initialPosition: element.position,
-          elementRef: (el: HTMLDivElement | null) => handleElementRef(element.id, el),
-          isCreatingConnection,
-          isSelected,
-          activeConnectionId: activeConnection?.sourceId,
-          onSelect: () => handleSelectElement(element.id),
-          onStartConnection: () => onStartConnection(element.id, element.type),
-          onCompleteConnection: () => onCompleteConnection(element.id, element.type),
-          onUpdatePosition: (position: { x: number; y: number }) => handleUpdatePosition(element.id, position),
-        };
-        
-        if (element.type === 'campaign') {
-          return <Campaign {...commonProps} />;
-        } else if (element.type === 'adset') {
-          return <AdSet {...commonProps} />;
-        } else if (element.type === 'ad') {
-          return <Ad {...commonProps} />;
-        }
-        return null;
-      })}
+      <ElementsRenderer 
+        elements={elements}
+        selectedElementIds={selectedElementIds}
+        isCreatingConnection={isCreatingConnection}
+        activeConnection={activeConnection}
+        onSelectElement={onSelectElement}
+        onStartConnection={onStartConnection}
+        onCompleteConnection={onCompleteConnection}
+        onUpdatePosition={onUpdatePosition}
+        elementRefs={handleElementRef}
+      />
     </>
   );
 };
