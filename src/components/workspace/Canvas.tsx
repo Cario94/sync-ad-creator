@@ -128,6 +128,18 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     toast.success(`Updated ${selectedElementIds.length} elements`);
     addToHistory(elements);
   };
+
+  // Handle updating individual element (for alignment)
+  const updateIndividualElement = (elementId: string, updates: Partial<CanvasElement>) => {
+    setElements(prev => 
+      prev.map(el => 
+        el.id === elementId 
+          ? { ...el, ...updates } 
+          : el
+      )
+    );
+    addToHistory(elements);
+  };
   
   // Add keyboard shortcut handlers
   useEffect(() => {
@@ -207,7 +219,9 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
           count={selectedElementIds.length}
           onClose={() => setShowMultiSettings(false)}
           onUpdate={updateMultipleElements}
+          onUpdateIndividual={updateIndividualElement}
           elementTypes={selectedElements.map(el => el.type)}
+          selectedElements={selectedElements}
         />
       )}
       

@@ -10,14 +10,18 @@ interface MultiSelectSettingsProps {
   count: number;
   onClose: () => void;
   onUpdate: (updates: Partial<CanvasElement>) => void;
+  onUpdateIndividual: (elementId: string, updates: Partial<CanvasElement>) => void;
   elementTypes: ('campaign' | 'adset' | 'ad')[];
+  selectedElements: CanvasElement[];
 }
 
 const MultiSelectSettings: React.FC<MultiSelectSettingsProps> = ({
   count,
   onClose,
   onUpdate,
-  elementTypes
+  onUpdateIndividual,
+  elementTypes,
+  selectedElements
 }) => {
   // Check if all selected elements are of the same type
   const allSameType = elementTypes.every(type => type === elementTypes[0]);
@@ -33,6 +37,42 @@ const MultiSelectSettings: React.FC<MultiSelectSettingsProps> = ({
       onUpdate({ name: newName });
       form.reset();
     }
+  };
+
+  const handleAlignLeft = () => {
+    const leftmostX = Math.min(...selectedElements.map(el => el.position.x));
+    selectedElements.forEach(element => {
+      onUpdateIndividual(element.id, { 
+        position: { x: leftmostX, y: element.position.y } 
+      });
+    });
+  };
+
+  const handleAlignCenter = () => {
+    const positions = selectedElements.map(el => el.position.x);
+    const centerX = (Math.min(...positions) + Math.max(...positions)) / 2;
+    selectedElements.forEach(element => {
+      onUpdateIndividual(element.id, { 
+        position: { x: centerX, y: element.position.y } 
+      });
+    });
+  };
+
+  const handleDistribute = () => {
+    if (selectedElements.length < 3) return;
+    
+    const sortedElements = [...selectedElements].sort((a, b) => a.position.x - b.position.x);
+    const leftmost = sortedElements[0].position.x;
+    const rightmost = sortedElements[sortedElements.length - 1].position.x;
+    const spacing = (rightmost - leftmost) / (sortedElements.length - 1);
+    
+    sortedElements.forEach((element, index) => {
+      if (index > 0 && index < sortedElements.length - 1) {
+        onUpdateIndividual(element.id, {
+          position: { x: leftmost + spacing * index, y: element.position.y }
+        });
+      }
+    });
   };
   
   return (
@@ -69,24 +109,22 @@ const MultiSelectSettings: React.FC<MultiSelectSettingsProps> = ({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => onUpdate({ position: { x: 100, y: 100 } })}
+              onClick={handleAlignLeft}
             >
               Align Left
             </Button>
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => onUpdate({ position: { x: 400, y: 100 } })}
+              onClick={handleAlignCenter}
             >
               Align Center
             </Button>
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => {
-                /* Implementation would depend on your layout needs */
-                onUpdate({});
-              }}
+              onClick={handleDistribute}
+              disabled={selectedElements.length < 3}
             >
               Distribute
             </Button>
