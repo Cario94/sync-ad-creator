@@ -79,19 +79,37 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     }
   };
   
-  // Complete selection with rectangle
+  // Complete selection with rectangle  
   useEffect(() => {
     if (!isSelecting && selectionRect && selectionRect.width > 5 && selectionRect.height > 5) {
       // Find all elements that are within the selection rectangle
       const selectedIds = elements.filter(element => {
         const { x, y } = element.position;
-        const isWithinSelection = 
-          x >= selectionRect.startX && 
-          x <= selectionRect.startX + selectionRect.width &&
-          y >= selectionRect.startY && 
-          y <= selectionRect.startY + selectionRect.height;
+        // Use actual element dimensions - all elements use w-64 (256px) and approximate height
+        const elementWidth = 256; // w-64 class = 256px
+        const elementHeight = 120; // Approximate height including padding and content
         
-        return isWithinSelection;
+        // Element boundaries
+        const elementLeft = x;
+        const elementRight = x + elementWidth;
+        const elementTop = y;
+        const elementBottom = y + elementHeight;
+        
+        // Selection boundaries
+        const selectionLeft = selectionRect.startX;
+        const selectionRight = selectionRect.startX + selectionRect.width;
+        const selectionTop = selectionRect.startY;
+        const selectionBottom = selectionRect.startY + selectionRect.height;
+        
+        // Check for overlap (not just if top-left corner is inside)
+        const isOverlapping = !(
+          elementRight < selectionLeft ||
+          elementLeft > selectionRight ||
+          elementBottom < selectionTop ||
+          elementTop > selectionBottom
+        );
+        
+        return isOverlapping;
       }).map(el => el.id);
       
       if (selectedIds.length > 0) {
@@ -99,7 +117,20 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
         if (selectedIds.length > 1) {
           setShowMultiSettings(true);
         }
+        toast.success(`Selected ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}`);
+      } else {
+        // Clear selection if no elements found
+        setSelectedElementIds([]);
+        setShowMultiSettings(false);
       }
+    }
+    // Clear selection rectangle after processing, regardless of results
+    if (!isSelecting && selectionRect) {
+      // Small delay to ensure visual feedback is seen
+      const timer = setTimeout(() => {
+        // This helps ensure the selection rectangle is properly cleared
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isSelecting, selectionRect, elements]);
   

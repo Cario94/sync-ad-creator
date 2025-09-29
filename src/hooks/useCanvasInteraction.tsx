@@ -43,6 +43,9 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   
   // Handle canvas dragging (panning) with space + mouse
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Prevent event bubbling for better responsiveness
+    e.preventDefault();
+    
     // If space is pressed, handle canvas dragging
     if (spacePressed) {
       setIsDragging(true);
@@ -64,6 +67,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     }
   }, [spacePressed, pan, scale]);
   
+  // Handle selection rectangle with better performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     // Handle canvas dragging
     if (isDragging && spacePressed) {
@@ -74,17 +78,22 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
       return;
     }
     
-    // Handle selection rectangle
+    // Handle selection rectangle with optimized updates
     if (isSelecting && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const currentX = (e.clientX - rect.left) / scale - pan.x;
-      const currentY = (e.clientY - rect.top) / scale - pan.y;
-      
-      setSelectionRect({
-        startX: Math.min(selectionStart.x, currentX),
-        startY: Math.min(selectionStart.y, currentY),
-        width: Math.abs(currentX - selectionStart.x),
-        height: Math.abs(currentY - selectionStart.y)
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        const currentX = (e.clientX - rect.left) / scale - pan.x;
+        const currentY = (e.clientY - rect.top) / scale - pan.y;
+        
+        setSelectionRect({
+          startX: Math.min(selectionStart.x, currentX),
+          startY: Math.min(selectionStart.y, currentY),
+          width: Math.abs(currentX - selectionStart.x),
+          height: Math.abs(currentY - selectionStart.y)
+        });
       });
     }
   }, [isDragging, spacePressed, startPan, isSelecting, selectionStart, scale, pan]);
