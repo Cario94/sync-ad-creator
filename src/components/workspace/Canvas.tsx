@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
-import CanvasElements, { CanvasElement } from './CanvasElements';
+import CanvasElements from './CanvasElements';
+import { CanvasElement } from './types/canvas';
 import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
 import { useConnections } from '@/hooks/useConnections';
 import { toast } from 'sonner';
