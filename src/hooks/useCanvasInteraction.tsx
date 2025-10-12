@@ -43,11 +43,9 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   
   // Handle canvas dragging (panning) with space + mouse
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Prevent event bubbling for better responsiveness
-    e.preventDefault();
-    
     // If space is pressed, handle canvas dragging
     if (spacePressed) {
+      e.preventDefault();
       setIsDragging(true);
       setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       return;
@@ -58,8 +56,9 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     if (e.target === e.currentTarget) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = (e.clientX - rect.left) / scale - pan.x;
-        const y = (e.clientY - rect.top) / scale - pan.y;
+        // Correct coordinate transformation accounting for scale and pan
+        const x = (e.clientX - rect.left - pan.x) / scale;
+        const y = (e.clientY - rect.top - pan.y) / scale;
         setSelectionStart({ x, y });
         setSelectionRect({ startX: x, startY: y, width: 0, height: 0 });
         setIsSelecting(true);
@@ -80,20 +79,17 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     
     // Handle selection rectangle with optimized updates
     if (isSelecting && canvasRef.current) {
-      // Use requestAnimationFrame for smoother updates
-      requestAnimationFrame(() => {
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        
-        const currentX = (e.clientX - rect.left) / scale - pan.x;
-        const currentY = (e.clientY - rect.top) / scale - pan.y;
-        
-        setSelectionRect({
-          startX: Math.min(selectionStart.x, currentX),
-          startY: Math.min(selectionStart.y, currentY),
-          width: Math.abs(currentX - selectionStart.x),
-          height: Math.abs(currentY - selectionStart.y)
-        });
+      const rect = canvasRef.current.getBoundingClientRect();
+      
+      // Correct coordinate transformation accounting for scale and pan
+      const currentX = (e.clientX - rect.left - pan.x) / scale;
+      const currentY = (e.clientY - rect.top - pan.y) / scale;
+      
+      setSelectionRect({
+        startX: Math.min(selectionStart.x, currentX),
+        startY: Math.min(selectionStart.y, currentY),
+        width: Math.abs(currentX - selectionStart.x),
+        height: Math.abs(currentY - selectionStart.y)
       });
     }
   }, [isDragging, spacePressed, startPan, isSelecting, selectionStart, scale, pan]);

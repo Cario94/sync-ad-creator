@@ -266,9 +266,9 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
           onMouseLeave={handleMouseUp}
           onClick={handleCanvasClick}
           style={{
-            transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: '0 0',
-            transition: isDragging ? 'none' : 'transform 0.1s'
+            transition: isDragging || isSelecting ? 'none' : 'transform 0.1s'
           }}
         >
           {/* Selection rectangle */}
