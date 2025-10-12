@@ -256,7 +256,7 @@ const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
   }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, connections, removeConnection, onUndo, onRedo]);
   
   return (
-    <div className="relative w-full h-full overflow-hidden bg-secondary/20">
+    <div className="relative w-full h-full overflow-hidden bg-background">
       {/* Zoom controls */}
       <ZoomControls 
         scale={scale} 
@@ -279,7 +279,7 @@ const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
       <CanvasContextMenu elementType="">
         <div 
           ref={canvasRef}
-          className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''}`}
+          className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative`}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -291,6 +291,35 @@ const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
             transition: isDragging || isSelecting ? 'none' : 'transform 0.1s'
           }}
         >
+          {/* SVG Grid Background */}
+          <svg 
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ 
+              zIndex: 0,
+              minWidth: '200%',
+              minHeight: '200%',
+              left: '-50%',
+              top: '-50%'
+            }}
+          >
+            <defs>
+              <pattern 
+                id="grid" 
+                width="25" 
+                height="25" 
+                patternUnits="userSpaceOnUse"
+              >
+                <path 
+                  d="M 25 0 L 0 0 0 25" 
+                  fill="none" 
+                  stroke="rgba(0, 0, 0, 0.05)" 
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+          
           {/* Selection rectangle */}
           {isSelecting && selectionRect && (
             <div 
