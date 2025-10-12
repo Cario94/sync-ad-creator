@@ -34,7 +34,6 @@ const ElementsRenderer: React.FC<ElementsRendererProps> = ({
         const isSelected = selectedElementIds.includes(element.id);
         
         const commonProps = {
-          key: element.id,
           id: element.id,
           name: element.name,
           initialPosition: element.position,
@@ -49,11 +48,11 @@ const ElementsRenderer: React.FC<ElementsRendererProps> = ({
         };
         
         if (element.type === 'campaign') {
-          return <Campaign {...commonProps} />;
+          return <Campaign key={element.id} {...commonProps} />;
         } else if (element.type === 'adset') {
-          return <AdSet {...commonProps} />;
+          return <AdSet key={element.id} {...commonProps} />;
         } else if (element.type === 'ad') {
-          return <Ad {...commonProps} />;
+          return <Ad key={element.id} {...commonProps} />;
         }
         return null;
       })}

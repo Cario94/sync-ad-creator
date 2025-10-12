@@ -11,9 +11,11 @@ import MultiSelectSettings from './MultiSelectSettings';
 
 interface CanvasProps {
   className?: string;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
+const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
   // State for canvas elements
   const [elements, setElements] = useState<CanvasElement[]>([
     { id: 'campaign-1', type: 'campaign', name: 'Summer Sale 2023', position: { x: 100, y: 100 } },
@@ -198,6 +200,22 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
             setSelectedElementIds(duplicatedElements.map(el => el.id));
             addToHistory([...elements, ...duplicatedElements]);
           }
+        } else if (e.key === 'z') {
+          // Undo/Redo
+          e.preventDefault();
+          if (e.shiftKey) {
+            const state = handleRedo();
+            if (state) {
+              setElements(state);
+              onRedo?.();
+            }
+          } else {
+            const state = handleUndo();
+            if (state) {
+              setElements(state);
+              onUndo?.();
+            }
+          }
         }
       }
       
@@ -205,8 +223,10 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.length > 0) {
         e.preventDefault();
         
+        const newElements = elements.filter(el => !selectedElementIds.includes(el.id));
+        
         // Remove the selected elements
-        setElements(prev => prev.filter(el => !selectedElementIds.includes(el.id)));
+        setElements(newElements);
         
         // Remove any connections involving the deleted elements
         if (connections.some(conn => 
@@ -223,8 +243,8 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
         
         setSelectedElementIds([]);
         setShowMultiSettings(false);
-        toast.success(`${selectedElementIds.length} element(s) deleted`);
-        addToHistory(elements.filter(el => !selectedElementIds.includes(el.id)));
+        toast.success(`Deleted ${selectedElementIds.length} element(s)`);
+        addToHistory(newElements);
       }
     };
     
@@ -233,7 +253,7 @@ const Canvas: React.FC<CanvasProps> = ({ className = '' }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, addToHistory, connections, removeConnection]);
+  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, connections, removeConnection, onUndo, onRedo]);
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-secondary/20">

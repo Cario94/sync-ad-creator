@@ -19,7 +19,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const ToolBar: React.FC = () => {
+interface ToolBarProps {
+  onUndo?: () => void;
+  onRedo?: () => void;
+}
+
+const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo }) => {
   const handleAction = (action: string) => {
     console.log(`Action triggered: ${action}`);
     toast(`${action} clicked`, {
@@ -137,7 +142,7 @@ const ToolBar: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleAction("Undo")}
+                onClick={onUndo}
                 className="h-9 w-9"
               >
                 <Undo className="h-4 w-4" />
@@ -153,7 +158,7 @@ const ToolBar: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleAction("Redo")}
+                onClick={onRedo}
                 className="h-9 w-9"
               >
                 <Redo className="h-4 w-4" />

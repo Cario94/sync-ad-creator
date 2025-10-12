@@ -25,6 +25,8 @@ const Workspace = () => {
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -142,7 +144,16 @@ const Workspace = () => {
         
         {/* Toolbar */}
         <div className="p-4 flex justify-center">
-          <ToolBar />
+          <ToolBar 
+            onUndo={() => {
+              const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true });
+              window.dispatchEvent(event);
+            }}
+            onRedo={() => {
+              const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true, shiftKey: true });
+              window.dispatchEvent(event);
+            }}
+          />
         </div>
         
         {/* Canvas */}
