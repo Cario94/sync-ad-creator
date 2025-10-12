@@ -69,7 +69,7 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       <path
         d={pathData}
         fill="none"
-        stroke={hover ? "var(--primary)" : "var(--muted-foreground)"}
+        stroke={hover ? "hsl(var(--primary))" : "#000000"}
         strokeWidth={2}
         strokeDasharray={hover ? "none" : "5,5"}
       />
@@ -77,14 +77,14 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       {/* Arrow tail at the source */}
       <polygon 
         points={tailPoints}
-        fill={hover ? "var(--primary)" : "var(--muted-foreground)"}
+        fill={hover ? "hsl(var(--primary))" : "#000000"}
         stroke="none"
       />
       
       {/* Improved arrow head at the target */}
       <polygon 
         points={`${targetX},${targetY} ${targetX-10},${targetY-6} ${targetX-5},${targetY} ${targetX-10},${targetY+6}`}
-        fill={hover ? "var(--primary)" : "var(--muted-foreground)"}
+        fill={hover ? "hsl(var(--primary))" : "#000000"}
         stroke="none"
       />
       
