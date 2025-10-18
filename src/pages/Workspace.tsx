@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import Canvas from '@/components/workspace/Canvas';
+import Canvas, { CanvasRef } from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import { 
@@ -29,6 +29,7 @@ const Workspace = () => {
   const [canRedo, setCanRedo] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const canvasRef = useRef<CanvasRef>(null);
   
   const handleLogout = () => {
     toast({
@@ -47,11 +48,7 @@ const Workspace = () => {
   };
 
   const handleTidyLayout = () => {
-    toast({
-      title: "Tidy Layout",
-      description: "Organizing elements for better visibility"
-    });
-    // Implementation for tidying layout would go here
+    canvasRef.current?.tidyLayout();
   };
 
   return (
@@ -158,7 +155,7 @@ const Workspace = () => {
         
         {/* Canvas */}
         <div className="flex-1 overflow-hidden relative">
-          <Canvas />
+          <Canvas ref={canvasRef} />
           
           {/* Tidy Layout Button - Bottom Right Corner */}
           <div className="absolute bottom-20 right-4 z-10">

@@ -13,9 +13,15 @@ interface CanvasProps {
   className?: string;
   onUndo?: () => void;
   onRedo?: () => void;
+  onTidyLayout?: () => void;
 }
 
-const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
+// Expose Canvas methods via ref
+interface CanvasRef {
+  tidyLayout: () => void;
+}
+
+const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUndo, onRedo, onTidyLayout }, ref) => {
   // State for canvas elements
   const [elements, setElements] = useState<CanvasElement[]>([
     { id: 'campaign-1', type: 'campaign', name: 'Summer Sale 2023', position: { x: 100, y: 100 } },
@@ -173,6 +179,64 @@ const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
     );
     addToHistory(elements);
   };
+
+  // Tidy layout function - organizes elements in a clean grid
+  const tidyLayout = () => {
+    // Group elements by type
+    const campaigns = elements.filter(el => el.type === 'campaign');
+    const adsets = elements.filter(el => el.type === 'adset');
+    const ads = elements.filter(el => el.type === 'ad');
+    
+    const startX = 100;
+    const startY = 100;
+    const horizontalSpacing = 350;
+    const verticalSpacing = 150;
+    
+    const newElements = [...elements];
+    
+    // Position campaigns in first column
+    campaigns.forEach((campaign, index) => {
+      const element = newElements.find(el => el.id === campaign.id);
+      if (element) {
+        element.position = {
+          x: startX,
+          y: startY + (index * verticalSpacing)
+        };
+      }
+    });
+    
+    // Position adsets in second column
+    adsets.forEach((adset, index) => {
+      const element = newElements.find(el => el.id === adset.id);
+      if (element) {
+        element.position = {
+          x: startX + horizontalSpacing,
+          y: startY + (index * verticalSpacing)
+        };
+      }
+    });
+    
+    // Position ads in third column
+    ads.forEach((ad, index) => {
+      const element = newElements.find(el => el.id === ad.id);
+      if (element) {
+        element.position = {
+          x: startX + (horizontalSpacing * 2),
+          y: startY + (index * verticalSpacing)
+        };
+      }
+    });
+    
+    setElements(newElements);
+    addToHistory(newElements);
+    onTidyLayout?.();
+    toast.success('Layout organized successfully');
+  };
+
+  // Expose methods via ref
+  React.useImperativeHandle(ref, () => ({
+    tidyLayout
+  }));
   
   // Add keyboard shortcut handlers
   useEffect(() => {
@@ -351,6 +415,9 @@ const Canvas: React.FC<CanvasProps> = ({ className = '', onUndo, onRedo }) => {
       </CanvasContextMenu>
     </div>
   );
-};
+});
+
+Canvas.displayName = 'Canvas';
 
 export default Canvas;
+export type { CanvasRef };
