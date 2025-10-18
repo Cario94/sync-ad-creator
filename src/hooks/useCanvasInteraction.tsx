@@ -242,26 +242,44 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     };
   }, [handleRedo, handleUndo]);
   
-  // Use a non-passive wheel event listener for the canvas element
+  // Use a non-passive wheel event listener for zoom and trackpad pan
   useEffect(() => {
     const canvas = canvasRef.current;
     
     if (!canvas) return;
     
     const wheelHandler = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey || spacePressed) {
+      // Zoom with Cmd/Ctrl + scroll (both trackpad and mouse)
+      if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         
-        if (e.ctrlKey || e.metaKey) {
-          const delta = e.deltaY * -0.01;
-          const newScale = Math.min(Math.max(scale + delta, minScale), maxScale);
-          setScale(newScale);
-        } else if (spacePressed) {
-          setPan(prev => ({
-            x: prev.x - e.deltaX,
-            y: prev.y - e.deltaY
-          }));
-        }
+        const delta = e.deltaY * -0.005; // Smoother zoom
+        const newScale = Math.min(Math.max(scale + delta, minScale), maxScale);
+        setScale(newScale);
+        return;
+      }
+      
+      // Pan with Space + trackpad/mouse scroll
+      if (spacePressed) {
+        e.preventDefault();
+        setPan(prev => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY
+        }));
+        return;
+      }
+      
+      // Two-finger trackpad pan (no modifiers needed)
+      // Trackpad pan typically has both deltaX and deltaY
+      // and usually has smaller absolute values than mouse wheel
+      const isTrackpadPan = Math.abs(e.deltaX) > 0 || (Math.abs(e.deltaY) < 50 && e.deltaMode === 0);
+      
+      if (isTrackpadPan && !e.shiftKey) {
+        e.preventDefault();
+        setPan(prev => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY
+        }));
       }
     };
     
@@ -270,7 +288,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     return () => {
       canvas.removeEventListener('wheel', wheelHandler);
     };
-  }, [scale, spacePressed, pan, minScale, maxScale]);
+  }, [scale, spacePressed, minScale, maxScale]);
   
   return {
     canvasRef,

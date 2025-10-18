@@ -64,7 +64,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     };
   }, [isCreatingConnection, onCancelConnection]);
 
-  // Track element positions for drawing connections
+  // Track element positions for drawing connections with better performance
   useEffect(() => {
     const updateElementPositions = () => {
       const positions: ElementPosition[] = [];
@@ -89,11 +89,16 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
       setElementPositions(positions);
     };
 
-    updateElementPositions();
+    // Use requestAnimationFrame for smoother updates
+    let rafId: number;
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateElementPositions);
+    };
+
+    scheduleUpdate();
     
-    const resizeObserver = new ResizeObserver(() => {
-      updateElementPositions();
-    });
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
     
     elementsRef.current.forEach(element => {
       if (element) {
@@ -106,6 +111,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     }
     
     return () => {
+      cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
     };
   }, [elements]);

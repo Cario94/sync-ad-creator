@@ -112,17 +112,18 @@ const Campaign: React.FC<CampaignProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-primary/30 cursor-grab",
-            isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
-            isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
+            "absolute p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 cursor-grab",
+            isDragging ? "cursor-grabbing shadow-xl opacity-90 z-50" : "z-10",
+            isSelected ? "ring-2 ring-primary shadow-xl z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-shadow duration-200"
+            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            minHeight: '140px'
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) {
@@ -134,14 +135,14 @@ const Campaign: React.FC<CampaignProps> = ({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Megaphone className="h-4 w-4 text-primary" />
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary/30">
+              <Megaphone className="h-5 w-5 text-primary" />
             </div>
-            <div className="font-medium text-sm">Campaign</div>
+            <div className="font-semibold text-sm uppercase tracking-wide text-primary">Campaign</div>
           </div>
-          <h3 className="font-semibold text-base">{campaignData.name}</h3>
-          <div className="mt-2 text-xs text-muted-foreground">
+          <h3 className="font-bold text-lg mb-1">{campaignData.name}</h3>
+          <div className="mt-2 text-xs text-muted-foreground font-medium">
             Objective: {campaignData.objective.charAt(0).toUpperCase() + campaignData.objective.slice(1)}
           </div>
           

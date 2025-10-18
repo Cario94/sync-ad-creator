@@ -65,27 +65,33 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Base connection path */}
+      {/* Base connection path with smooth rendering */}
       <path
         d={pathData}
         fill="none"
-        stroke={hover ? "hsl(var(--primary))" : "#000000"}
-        strokeWidth={2}
+        stroke={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+        strokeWidth={hover ? 3 : 2}
         strokeDasharray={hover ? "none" : "5,5"}
+        style={{ 
+          transition: 'all 0.15s ease-out',
+          vectorEffect: 'non-scaling-stroke'
+        }}
       />
       
       {/* Arrow tail at the source */}
       <polygon 
         points={tailPoints}
-        fill={hover ? "hsl(var(--primary))" : "#000000"}
+        fill={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
         stroke="none"
+        style={{ transition: 'fill 0.15s ease-out' }}
       />
       
       {/* Improved arrow head at the target */}
       <polygon 
         points={`${targetX},${targetY} ${targetX-10},${targetY-6} ${targetX-5},${targetY} ${targetX-10},${targetY+6}`}
-        fill={hover ? "hsl(var(--primary))" : "#000000"}
+        fill={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
         stroke="none"
+        style={{ transition: 'fill 0.15s ease-out' }}
       />
       
       {/* Delete button (only shows on hover) */}

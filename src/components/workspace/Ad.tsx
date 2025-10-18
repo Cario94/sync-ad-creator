@@ -98,17 +98,19 @@ const Ad: React.FC<AdProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab",
+            "absolute p-3.5 w-60 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab",
             isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-shadow duration-200"
+            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            minHeight: '120px',
+            width: '240px'
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) {
@@ -120,13 +122,13 @@ const Ad: React.FC<AdProps> = ({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="flex items-center space-x-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center">
               <ImageIcon className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="font-medium text-sm">Ad</div>
+            <div className="font-medium text-xs uppercase tracking-wide text-muted-foreground">Ad</div>
           </div>
-          <h3 className="font-semibold text-base">{adData.name}</h3>
+          <h3 className="font-semibold text-sm mb-1">{adData.name}</h3>
           
           {adData.imageUrl && (
             <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">

@@ -94,9 +94,9 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUnd
       // Find all elements that are within the selection rectangle
       const selectedIds = elements.filter(element => {
         const { x, y } = element.position;
-        // Use actual element dimensions - all elements use w-64 (256px) and approximate height
+        // Use actual element dimensions based on type (hierarchical sizing)
         const elementWidth = 256; // w-64 class = 256px
-        const elementHeight = 120; // Approximate height including padding and content
+        const elementHeight = element.type === 'campaign' ? 140 : element.type === 'adset' ? 130 : 120;
         
         // Element boundaries
         const elementLeft = x;
@@ -355,7 +355,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUnd
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: '0 0',
-            transition: isDragging || isSelecting ? 'none' : 'transform 0.1s'
+            transition: isDragging || isSelecting ? 'none' : 'transform 0.05s ease-out',
+            willChange: 'transform'
           }}
         >
           {/* SVG Grid Background */}

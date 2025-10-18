@@ -113,17 +113,19 @@ const AdSet: React.FC<AdSetProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-4 w-64 rounded-lg glass-dark shadow-sm border border-accent-foreground/30 cursor-grab",
-            isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
-            isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
+            "absolute p-4 w-66 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab",
+            isDragging ? "cursor-grabbing shadow-lg opacity-90 z-50" : "z-10",
+            isSelected ? "ring-2 ring-primary shadow-lg z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-shadow duration-200"
+            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            minHeight: '130px',
+            width: '264px'
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) {
@@ -136,12 +138,12 @@ const AdSet: React.FC<AdSetProps> = ({
           onDoubleClick={handleDoubleClick}
         >
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-accent-foreground/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-accent-foreground/15 flex items-center justify-center ring-2 ring-accent-foreground/20">
               <Users className="h-4 w-4 text-accent-foreground" />
             </div>
-            <div className="font-medium text-sm">Ad Set</div>
+            <div className="font-semibold text-sm uppercase tracking-wide text-accent-foreground">Ad Set</div>
           </div>
-          <h3 className="font-semibold text-base">{adSetData.name}</h3>
+          <h3 className="font-bold text-base mb-1">{adSetData.name}</h3>
           <div className="mt-2 text-xs text-muted-foreground">
             Budget: ${adSetData.budget}/day • Locations: {adSetData.locations.join(', ')}
           </div>
