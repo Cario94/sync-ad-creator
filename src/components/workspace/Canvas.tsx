@@ -76,6 +76,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUnd
     setElements(prev => 
       prev.map(el => el.id === id ? { ...el, position } : el)
     );
+    // Don't add to history on every position update - only on mouseup
   };
   
   // Handle canvas background click to deselect
@@ -156,28 +157,30 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUnd
   
   // Handle updating multiple selected elements
   const updateMultipleElements = (updates: Partial<CanvasElement>) => {
-    setElements(prev => 
-      prev.map(el => 
+    setElements(prev => {
+      const updated = prev.map(el => 
         selectedElementIds.includes(el.id) 
           ? { ...el, ...updates } 
           : el
-      )
-    );
+      );
+      addToHistory(updated);
+      return updated;
+    });
     
     toast.success(`Updated ${selectedElementIds.length} elements`);
-    addToHistory(elements);
   };
 
   // Handle updating individual element (for alignment)
   const updateIndividualElement = (elementId: string, updates: Partial<CanvasElement>) => {
-    setElements(prev => 
-      prev.map(el => 
+    setElements(prev => {
+      const updated = prev.map(el => 
         el.id === elementId 
           ? { ...el, ...updates } 
           : el
-      )
-    );
-    addToHistory(elements);
+      );
+      addToHistory(updated);
+      return updated;
+    });
   };
 
   // Tidy layout function - organizes elements in a clean grid

@@ -165,7 +165,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
       return [...newHistory, state];
     });
     setHistoryIndex(prev => prev + 1);
-  }, [historyIndex]);
+  }, []); // Remove historyIndex from dependencies to prevent loop
 
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
