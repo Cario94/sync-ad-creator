@@ -192,7 +192,7 @@ function WorkspaceInner() {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          <div className="text-lg font-semibold ml-auto mr-auto">Campaign Workspace</div>
+          <div className="text-lg font-semibold ml-auto mr-auto truncate max-w-xs">{projectName || 'Workspace'}</div>
           <div className="flex items-center space-x-3">
             <SaveStatusIndicator status={saveStatus} />
             <Button
