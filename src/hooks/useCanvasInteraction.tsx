@@ -1,6 +1,6 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import type { CanvasElement } from '@/components/workspace/types/canvas';
 
 interface UseCanvasInteractionOptions {
   minScale?: number;
@@ -23,8 +23,8 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
-  const [clipboardItem, setClipboardItem] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [clipboardItem, setClipboardItem] = useState<CanvasElement[] | null>(null);
+  const [history, setHistory] = useState<CanvasElement[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
   // Selection rectangle state
@@ -32,7 +32,6 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState({ x: 0, y: 0 });
   
-  // Handle zoom with buttons
   const handleZoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.1, maxScale));
   }, [maxScale]);
@@ -41,9 +40,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     setScale(prev => Math.max(prev - 0.1, minScale));
   }, [minScale]);
   
-  // Handle canvas dragging (panning) with space + mouse
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // If space is pressed, handle canvas dragging
     if (spacePressed) {
       e.preventDefault();
       setIsDragging(true);
@@ -51,12 +48,9 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
       return;
     }
     
-    // If we're not panning and the click is directly on the canvas background
-    // (not a child element), start selection
     if (e.target === e.currentTarget) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        // Correct coordinate transformation accounting for scale and pan
         const x = (e.clientX - rect.left - pan.x) / scale;
         const y = (e.clientY - rect.top - pan.y) / scale;
         setSelectionStart({ x, y });
@@ -66,22 +60,14 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     }
   }, [spacePressed, pan, scale]);
   
-  // Handle selection rectangle with better performance
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    // Handle canvas dragging
     if (isDragging && spacePressed) {
-      setPan({
-        x: e.clientX - startPan.x,
-        y: e.clientY - startPan.y
-      });
+      setPan({ x: e.clientX - startPan.x, y: e.clientY - startPan.y });
       return;
     }
     
-    // Handle selection rectangle with optimized updates
     if (isSelecting && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      
-      // Correct coordinate transformation accounting for scale and pan
       const currentX = (e.clientX - rect.left - pan.x) / scale;
       const currentY = (e.clientY - rect.top - pan.y) / scale;
       
@@ -94,78 +80,54 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     }
   }, [isDragging, spacePressed, startPan, isSelecting, selectionStart, scale, pan]);
   
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    
-    // Finish selection operation
     if (isSelecting) {
       setIsSelecting(false);
-      // The actual selection logic will be handled in the component that uses this hook
     }
   }, [isSelecting]);
 
-  // Handle clipboard operations
-  const handleCopy = useCallback((selectedElements: any[]) => {
+  /** Deep-clone an element with a new unique ID and offset position */
+  const cloneElement = (el: CanvasElement, offsetX = 20, offsetY = 20): CanvasElement => ({
+    ...el,
+    id: `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    name: `${el.name} (copy)`,
+    position: { x: el.position.x + offsetX, y: el.position.y + offsetY },
+    config: el.config ? { ...el.config } : {},
+  });
+
+  const handleCopy = useCallback((selectedElements: CanvasElement[]) => {
     if (selectedElements.length > 0) {
       setClipboardItem(selectedElements);
       toast.success(`Copied ${selectedElements.length} element(s) to clipboard`);
     }
   }, []);
 
-  const handlePaste = useCallback(() => {
-    if (clipboardItem) {
-      // Return the clipboard items with new IDs and slightly offset positions
-      const newItems = Array.isArray(clipboardItem) 
-        ? clipboardItem.map(item => ({
-            ...item,
-            id: `${item.type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            position: {
-              x: item.position.x + 20,
-              y: item.position.y + 20
-            }
-          }))
-        : [{
-            ...clipboardItem,
-            id: `${clipboardItem.type}-${Date.now()}`,
-            position: {
-              x: clipboardItem.position.x + 20,
-              y: clipboardItem.position.y + 20
-            }
-          }];
-      
+  const handlePaste = useCallback((): CanvasElement[] | null => {
+    if (clipboardItem && clipboardItem.length > 0) {
+      const newItems = clipboardItem.map(item => cloneElement(item));
       toast.success(`Pasted ${newItems.length} element(s) from clipboard`);
       return newItems;
     }
     return null;
   }, [clipboardItem]);
 
-  const handleDuplicate = useCallback((selectedElements: any[]) => {
+  const handleDuplicate = useCallback((selectedElements: CanvasElement[]): CanvasElement[] | null => {
     if (selectedElements.length > 0) {
-      // Create duplicates with new IDs and slightly offset positions
-      const duplicatedItems = selectedElements.map(item => ({
-        ...item,
-        id: `${item.type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        position: {
-          x: item.position.x + 20,
-          y: item.position.y + 20
-        }
-      }));
-      
-      toast.success(`Duplicated ${duplicatedItems.length} element(s)`);
-      return duplicatedItems;
+      const duplicated = selectedElements.map(item => cloneElement(item));
+      toast.success(`Duplicated ${duplicated.length} element(s)`);
+      return duplicated;
     }
     return null;
   }, []);
 
-  // Undo/Redo operations
-  const addToHistory = useCallback((state: any) => {
+  const addToHistory = useCallback((state: CanvasElement[]) => {
     setHistory(prev => {
-      // Remove any forward history if we're adding a new state after undoing
       const newHistory = prev.slice(0, historyIndex + 1);
       return [...newHistory, state];
     });
     setHistoryIndex(prev => prev + 1);
-  }, []); // Remove historyIndex from dependencies to prevent loop
+  }, []);
 
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
@@ -187,38 +149,18 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     return null;
   }, [history, historyIndex]);
   
-  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Space for panning
       if (e.code === 'Space' && !e.repeat) {
         setSpacePressed(true);
-        // Change cursor to grabbing
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = 'grab';
-        }
+        if (canvasRef.current) canvasRef.current.style.cursor = 'grab';
       }
       
-      // Handle keyboard shortcuts
       if (e.metaKey || e.ctrlKey) {
-        if (e.key === 'c') {
-          // Copy functionality is handled externally
-          e.preventDefault();
-        } else if (e.key === 'v') {
-          // Paste functionality is handled externally
-          e.preventDefault();
-        } else if (e.key === 'd') {
-          // Duplicate functionality is handled externally
+        if (e.key === 'c' || e.key === 'v' || e.key === 'd') {
           e.preventDefault();
         } else if (e.key === 'z') {
           e.preventDefault();
-          if (e.shiftKey) {
-            // Redo
-            handleRedo();
-          } else {
-            // Undo
-            handleUndo();
-          }
         }
       }
     };
@@ -226,10 +168,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setSpacePressed(false);
-        // Reset cursor
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = 'default';
-        }
+        if (canvasRef.current) canvasRef.current.style.cursor = 'default';
       }
     };
     
@@ -242,52 +181,34 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     };
   }, [handleRedo, handleUndo]);
   
-  // Use a non-passive wheel event listener for zoom and trackpad pan
   useEffect(() => {
     const canvas = canvasRef.current;
-    
     if (!canvas) return;
     
     const wheelHandler = (e: WheelEvent) => {
-      // Zoom with Cmd/Ctrl + scroll (both trackpad and mouse)
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        
-        const delta = e.deltaY * -0.005; // Smoother zoom
+        const delta = e.deltaY * -0.005;
         const newScale = Math.min(Math.max(scale + delta, minScale), maxScale);
         setScale(newScale);
         return;
       }
       
-      // Pan with Space + trackpad/mouse scroll
       if (spacePressed) {
         e.preventDefault();
-        setPan(prev => ({
-          x: prev.x - e.deltaX,
-          y: prev.y - e.deltaY
-        }));
+        setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
         return;
       }
       
-      // Two-finger trackpad pan (no modifiers needed)
-      // Trackpad pan typically has both deltaX and deltaY
-      // and usually has smaller absolute values than mouse wheel
       const isTrackpadPan = Math.abs(e.deltaX) > 0 || (Math.abs(e.deltaY) < 50 && e.deltaMode === 0);
-      
       if (isTrackpadPan && !e.shiftKey) {
         e.preventDefault();
-        setPan(prev => ({
-          x: prev.x - e.deltaX,
-          y: prev.y - e.deltaY
-        }));
+        setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
     };
     
     canvas.addEventListener('wheel', wheelHandler, { passive: false });
-    
-    return () => {
-      canvas.removeEventListener('wheel', wheelHandler);
-    };
+    return () => canvas.removeEventListener('wheel', wheelHandler);
   }, [scale, spacePressed, minScale, maxScale]);
   
   return {

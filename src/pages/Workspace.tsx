@@ -198,6 +198,7 @@ const Workspace = () => {
       type: 'ad',
       name: `Ad ${elementsRef.current.filter(e => e.type === 'ad').length + 1}`,
       position: findOpenPosition('ad'),
+      config: {},
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad created');

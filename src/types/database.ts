@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 // ── Row types (from DB) ──
@@ -26,6 +27,8 @@ export interface CanvasEdge {
   id: string;
   sourceId: string;
   targetId: string;
+  sourceType?: 'campaign' | 'adset' | 'ad';
+  targetType?: 'campaign' | 'adset' | 'ad';
 }
 
 export interface CanvasState {

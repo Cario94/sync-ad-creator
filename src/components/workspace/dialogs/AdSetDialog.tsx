@@ -1,34 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { CalendarIcon, Save, Trash, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface AdSetDialogProps {
@@ -55,75 +42,57 @@ interface AdSetDialogProps {
   onDelete?: () => void;
 }
 
+const defaultFormData = (adSet?: AdSetDialogProps['adSet'], campaigns?: { id: string; name: string }[]) => ({
+  name: adSet?.name || '',
+  campaignId: adSet?.campaignId || (campaigns && campaigns.length > 0 ? campaigns[0].id : ''),
+  budgetType: adSet?.budgetType || 'campaign',
+  budget: adSet?.budget || 20,
+  startDate: adSet?.startDate || new Date(),
+  endDate: adSet?.endDate,
+  ageMin: adSet?.ageMin || 18,
+  ageMax: adSet?.ageMax || 65,
+  gender: adSet?.gender || 'all',
+  locations: adSet?.locations || ['United States'],
+  placements: adSet?.placements || [],
+  automaticPlacements: adSet?.placements ? adSet.placements.length === 0 : true,
+  bidStrategy: adSet?.bidStrategy || 'lowest_cost',
+  optimizationGoal: adSet?.optimizationGoal || 'clicks',
+});
+
 const AdSetDialog: React.FC<AdSetDialogProps> = ({
-  open,
-  onOpenChange,
-  adSet,
-  campaigns = [],
-  onSave,
-  onDelete
+  open, onOpenChange, adSet, campaigns = [], onSave, onDelete
 }) => {
   const isEditing = !!adSet;
-  const [formData, setFormData] = useState({
-    name: adSet?.name || '',
-    campaignId: adSet?.campaignId || (campaigns.length > 0 ? campaigns[0].id : ''),
-    budgetType: adSet?.budgetType || 'campaign',
-    budget: adSet?.budget || 20,
-    startDate: adSet?.startDate || new Date(),
-    endDate: adSet?.endDate,
-    ageMin: adSet?.ageMin || 18,
-    ageMax: adSet?.ageMax || 65,
-    gender: adSet?.gender || 'all',
-    locations: adSet?.locations || ['United States'],
-    placements: adSet?.placements || [],
-    automaticPlacements: adSet?.placements ? adSet.placements.length === 0 : true,
-    bidStrategy: adSet?.bidStrategy || 'lowest_cost',
-    optimizationGoal: adSet?.optimizationGoal || 'clicks'
-  });
+  const [formData, setFormData] = useState(defaultFormData(adSet, campaigns));
+
+  // Re-sync when dialog opens
+  useEffect(() => {
+    if (open) setFormData(defaultFormData(adSet, campaigns));
+  }, [open, adSet?.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value
-    }));
+    setFormData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked
-    }));
+    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleDateChange = (name: string, date: Date | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: date
-    }));
+    setFormData(prev => ({ ...prev, [name]: date }));
   };
 
   const togglePlacement = (placement: string) => {
     setFormData(prev => {
-      const newPlacements = [...prev.placements];
-      if (newPlacements.includes(placement)) {
-        return {
-          ...prev,
-          placements: newPlacements.filter(p => p !== placement)
-        };
-      } else {
-        return {
-          ...prev,
-          placements: [...newPlacements, placement]
-        };
-      }
+      const newPlacements = prev.placements.includes(placement)
+        ? prev.placements.filter(p => p !== placement)
+        : [...prev.placements, placement];
+      return { ...prev, placements: newPlacements };
     });
   };
 
@@ -132,17 +101,8 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
       toast.error("Ad Set name is required");
       return;
     }
-    
-    // If automatic placements is selected, clear the placements array
-    const finalData = {
-      ...formData,
-      placements: formData.automaticPlacements ? [] : formData.placements
-    };
-    
-    onSave({ 
-      ...adSet, 
-      ...finalData 
-    });
+    const finalData = { ...formData, placements: formData.automaticPlacements ? [] : formData.placements };
+    onSave({ ...adSet, ...finalData });
     onOpenChange(false);
     toast.success(`Ad Set ${isEditing ? 'updated' : 'created'} successfully`);
   };
@@ -171,54 +131,30 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
             <TabsTrigger value="placements">Placements & Delivery</TabsTrigger>
           </TabsList>
 
-          {/* Ad Set Details Tab */}
           <TabsContent value="details" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Ad Set Name</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter ad set name" 
-                />
+                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter ad set name" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="campaignId">Campaign</Label>
-                <Select 
-                  value={formData.campaignId} 
-                  onValueChange={(value) => handleSelectChange('campaignId', value)}
-                  disabled={campaigns.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select campaign" />
-                  </SelectTrigger>
+                <Select value={formData.campaignId} onValueChange={(v) => handleSelectChange('campaignId', v)} disabled={campaigns.length === 0}>
+                  <SelectTrigger><SelectValue placeholder="Select campaign" /></SelectTrigger>
                   <SelectContent>
-                    {campaigns.map(campaign => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.name}
-                      </SelectItem>
+                    {campaigns.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {campaigns.length === 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    No campaigns available. Create a campaign first.
-                  </p>
-                )}
+                {campaigns.length === 0 && <p className="text-xs text-muted-foreground mt-1">No campaigns available.</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="budgetType">Budget Type</Label>
-                <Select 
-                  value={formData.budgetType} 
-                  onValueChange={(value) => handleSelectChange('budgetType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select budget type" />
-                  </SelectTrigger>
+                <Select value={formData.budgetType} onValueChange={(v) => handleSelectChange('budgetType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select budget type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="campaign">Use Campaign Budget Optimization</SelectItem>
                     <SelectItem value="adset">Ad Set Level Budget</SelectItem>
@@ -229,14 +165,7 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
               {formData.budgetType === 'adset' && (
                 <div className="space-y-2">
                   <Label htmlFor="budget">Daily Budget</Label>
-                  <Input 
-                    id="budget" 
-                    name="budget" 
-                    type="number" 
-                    value={formData.budget} 
-                    onChange={handleInputChange} 
-                    placeholder="Enter daily budget" 
-                  />
+                  <Input id="budget" name="budget" type="number" value={formData.budget} onChange={handleInputChange} placeholder="Enter daily budget" />
                 </div>
               )}
 
@@ -245,54 +174,27 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
                   <Label>Start Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
+                      <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.startDate ? (
-                          format(formData.startDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {formData.startDate ? format(formData.startDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.startDate}
-                        onSelect={(date) => handleDateChange('startDate', date)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={formData.startDate} onSelect={(d) => handleDateChange('startDate', d)} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
-
                 <div className="space-y-2">
                   <Label>End Date (Optional)</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
+                      <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.endDate ? (
-                          format(formData.endDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {formData.endDate ? format(formData.endDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.endDate}
-                        onSelect={(date) => handleDateChange('endDate', date)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={formData.endDate} onSelect={(d) => handleDateChange('endDate', d)} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -300,116 +202,58 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
             </div>
           </TabsContent>
 
-          {/* Audience & Targeting Tab */}
           <TabsContent value="audience" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Location Targeting</Label>
-                <Input 
-                  id="locations" 
-                  name="locations" 
-                  value={formData.locations.join(', ')} 
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    locations: e.target.value.split(',').map(location => location.trim())
-                  }))} 
-                  placeholder="Enter locations (comma separated)" 
-                />
+                <Input id="locations" name="locations" value={formData.locations.join(', ')} onChange={(e) => setFormData(prev => ({ ...prev, locations: e.target.value.split(',').map(l => l.trim()) }))} placeholder="Enter locations (comma separated)" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="ageMin">Minimum Age</Label>
-                  <Input 
-                    id="ageMin" 
-                    name="ageMin" 
-                    type="number" 
-                    min={13}
-                    max={65}
-                    value={formData.ageMin} 
-                    onChange={handleInputChange} 
-                  />
+                  <Input id="ageMin" name="ageMin" type="number" min={13} max={65} value={formData.ageMin} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ageMax">Maximum Age</Label>
-                  <Input 
-                    id="ageMax" 
-                    name="ageMax" 
-                    type="number" 
-                    min={13}
-                    max={65}
-                    value={formData.ageMax} 
-                    onChange={handleInputChange} 
-                  />
+                  <Input id="ageMax" name="ageMax" type="number" min={13} max={65} value={formData.ageMax} onChange={handleInputChange} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Gender</Label>
-                <RadioGroup 
-                  value={formData.gender}
-                  onValueChange={(value) => handleSelectChange('gender', value)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="all" id="gender-all" />
-                    <Label htmlFor="gender-all">All</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="male" id="gender-male" />
-                    <Label htmlFor="gender-male">Male</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="female" id="gender-female" />
-                    <Label htmlFor="gender-female">Female</Label>
-                  </div>
+                <RadioGroup value={formData.gender} onValueChange={(v) => handleSelectChange('gender', v)} className="flex space-x-4">
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="gender-all" /><Label htmlFor="gender-all">All</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="male" id="gender-male" /><Label htmlFor="gender-male">Male</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="female" id="gender-female" /><Label htmlFor="gender-female">Female</Label></div>
                 </RadioGroup>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="detailedTargeting">Detailed Targeting</Label>
-                <Input 
-                  id="detailedTargeting" 
-                  placeholder="Interests, behaviors, demographics" 
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter interests separated by commas (e.g., "fitness, health, yoga")
-                </p>
+                <Input id="detailedTargeting" placeholder="Interests, behaviors, demographics" />
+                <p className="text-xs text-muted-foreground mt-1">Enter interests separated by commas</p>
               </div>
             </div>
           </TabsContent>
 
-          {/* Placements & Delivery Tab */}
           <TabsContent value="placements" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="automaticPlacements" 
-                  checked={formData.automaticPlacements} 
-                  onCheckedChange={(checked) => {
-                    handleCheckboxChange('automaticPlacements', checked === true);
-                    if (checked) {
-                      setFormData(prev => ({ ...prev, placements: [] }));
-                    }
-                  }}
-                />
-                <Label htmlFor="automaticPlacements">
-                  Automatic Placements (Recommended)
-                </Label>
+                <Checkbox id="automaticPlacements" checked={formData.automaticPlacements} onCheckedChange={(c) => {
+                  handleCheckboxChange('automaticPlacements', c === true);
+                  if (c) setFormData(prev => ({ ...prev, placements: [] }));
+                }} />
+                <Label htmlFor="automaticPlacements">Automatic Placements (Recommended)</Label>
               </div>
 
               {!formData.automaticPlacements && (
                 <div className="space-y-2 border border-border rounded-md p-4">
                   <Label>Manual Placements</Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['Facebook Feed', 'Instagram Feed', 'Facebook Reels', 'Instagram Reels', 
-                      'Facebook Stories', 'Instagram Stories', 'Facebook Right Column', 'Messenger'].map(placement => (
+                    {['Facebook Feed', 'Instagram Feed', 'Facebook Reels', 'Instagram Reels', 'Facebook Stories', 'Instagram Stories', 'Facebook Right Column', 'Messenger'].map(placement => (
                       <div key={placement} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`placement-${placement}`} 
-                          checked={formData.placements.includes(placement)}
-                          onCheckedChange={() => togglePlacement(placement)}
-                        />
+                        <Checkbox id={`placement-${placement}`} checked={formData.placements.includes(placement)} onCheckedChange={() => togglePlacement(placement)} />
                         <Label htmlFor={`placement-${placement}`}>{placement}</Label>
                       </div>
                     ))}
@@ -419,13 +263,8 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="bidStrategy">Bid Strategy</Label>
-                <Select 
-                  value={formData.bidStrategy} 
-                  onValueChange={(value) => handleSelectChange('bidStrategy', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bid strategy" />
-                  </SelectTrigger>
+                <Select value={formData.bidStrategy} onValueChange={(v) => handleSelectChange('bidStrategy', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select bid strategy" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lowest_cost">Lowest Cost</SelectItem>
                     <SelectItem value="cost_cap">Cost Cap</SelectItem>
@@ -436,13 +275,8 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="optimizationGoal">Optimization Goal</Label>
-                <Select 
-                  value={formData.optimizationGoal} 
-                  onValueChange={(value) => handleSelectChange('optimizationGoal', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select optimization goal" />
-                  </SelectTrigger>
+                <Select value={formData.optimizationGoal} onValueChange={(v) => handleSelectChange('optimizationGoal', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select optimization goal" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="clicks">Clicks</SelectItem>
                     <SelectItem value="impressions">Impressions</SelectItem>
@@ -460,19 +294,16 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
           <div className="flex space-x-2">
             {isEditing && (
               <Button variant="destructive" onClick={handleDelete}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
+                <Trash className="mr-2 h-4 w-4" />Delete
               </Button>
             )}
           </div>
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
+              <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
+              <Save className="mr-2 h-4 w-4" />Save
             </Button>
           </div>
         </DialogFooter>

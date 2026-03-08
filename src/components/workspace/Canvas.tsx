@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
 import CanvasElements from './CanvasElements';
@@ -25,7 +24,6 @@ interface CanvasProps {
   onTidyLayout?: () => void;
 }
 
-// Expose Canvas methods via ref
 interface CanvasRef {
   tidyLayout: () => void;
   getElements: () => CanvasElement[];
@@ -55,38 +53,24 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const [elements, setElements] = useState<CanvasElement[]>([]);
   
   const {
-    canvasRef,
-    scale,
-    isDragging,
-    pan,
-    spacePressed,
-    selectionRect,
-    isSelecting,
-    handleZoomIn,
-    handleZoomOut,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    setScale,
-    setPan,
-    handleCopy,
-    handlePaste,
-    handleDuplicate,
-    handleUndo,
-    handleRedo,
-    addToHistory
+    canvasRef, scale, isDragging, pan, spacePressed,
+    selectionRect, isSelecting,
+    handleZoomIn, handleZoomOut,
+    handleMouseDown, handleMouseMove, handleMouseUp,
+    setScale, setPan,
+    handleCopy, handlePaste, handleDuplicate,
+    handleUndo, handleRedo, addToHistory
   } = useCanvasInteraction();
   
   const {
-    connections,
-    isCreatingConnection,
-    activeConnection,
-    startConnection,
-    completeConnection,
-    cancelConnection,
-    removeConnection,
-    setConnections
+    connections, isCreatingConnection, activeConnection,
+    startConnection, completeConnection, cancelConnection,
+    removeConnection, setConnections
   } = useConnections();
+
+  // Keep a ref to connections so callbacks always see current value
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
 
   // Hydrate from DB
   useEffect(() => {
@@ -184,50 +168,76 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     });
   }, [addToHistory]);
 
-  // ── Cascade delete ──
+  // ── Cascade delete — collects all IDs to remove in one pass ──
+  const collectCascadeIds = useCallback((ids: string[], currentElements: CanvasElement[]): Set<string> => {
+    const conns = connectionsRef.current;
+    const toRemove = new Set<string>(ids);
+    const elementMap = new Map(currentElements.map(el => [el.id, el]));
+
+    // Iteratively expand: if a campaign is being removed, also remove connected adsets,
+    // and if an adset is being removed, also remove connected ads.
+    let frontier = [...ids];
+    while (frontier.length > 0) {
+      const nextFrontier: string[] = [];
+      for (const fid of frontier) {
+        const el = elementMap.get(fid);
+        if (!el) continue;
+        if (el.type === 'campaign' || el.type === 'adset') {
+          const childIds = conns
+            .filter(c => c.sourceId === fid && !toRemove.has(c.targetId))
+            .map(c => c.targetId);
+          for (const cid of childIds) {
+            toRemove.add(cid);
+            nextFrontier.push(cid);
+          }
+        }
+      }
+      frontier = nextFrontier;
+    }
+    return toRemove;
+  }, []);
+
   const handleDeleteElement = useCallback((id: string) => {
     setElements(prev => {
-      const target = prev.find(el => el.id === id);
-      if (!target) return prev;
+      const idsToRemove = collectCascadeIds([id], prev);
 
-      // Collect IDs to remove: the target + cascade children via edges
-      const idsToRemove = new Set<string>([id]);
-
-      if (target.type === 'campaign') {
-        // Find adsets connected to this campaign
-        const childAdSetIds = connections
-          .filter(c => c.sourceId === id)
-          .map(c => c.targetId);
-        childAdSetIds.forEach(asId => {
-          idsToRemove.add(asId);
-          // Find ads connected to those adsets
-          connections
-            .filter(c => c.sourceId === asId)
-            .forEach(c => idsToRemove.add(c.targetId));
-        });
-      } else if (target.type === 'adset') {
-        // Find ads connected to this adset
-        connections
-          .filter(c => c.sourceId === id)
-          .forEach(c => idsToRemove.add(c.targetId));
-      }
-
-      // Remove orphaned connections
-      connections
+      // Clean up connections referencing removed elements
+      const conns = connectionsRef.current;
+      conns
         .filter(c => idsToRemove.has(c.sourceId) || idsToRemove.has(c.targetId))
         .forEach(c => removeConnection(c.id));
 
       const updated = prev.filter(el => !idsToRemove.has(el.id));
       addToHistory(updated);
 
-      const count = idsToRemove.size;
-      toast.success(`Deleted ${count} element${count > 1 ? 's' : ''}`);
+      toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
       return updated;
     });
 
     setSelectedElementIds(prev => prev.filter(eid => eid !== id));
     setShowMultiSettings(false);
-  }, [connections, removeConnection, addToHistory]);
+  }, [collectCascadeIds, removeConnection, addToHistory]);
+
+  /** Batch delete for multi-select (single setElements call) */
+  const handleDeleteMultiple = useCallback((ids: string[]) => {
+    setElements(prev => {
+      const idsToRemove = collectCascadeIds(ids, prev);
+
+      const conns = connectionsRef.current;
+      conns
+        .filter(c => idsToRemove.has(c.sourceId) || idsToRemove.has(c.targetId))
+        .forEach(c => removeConnection(c.id));
+
+      const updated = prev.filter(el => !idsToRemove.has(el.id));
+      addToHistory(updated);
+
+      toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
+      return updated;
+    });
+
+    setSelectedElementIds([]);
+    setShowMultiSettings(false);
+  }, [collectCascadeIds, removeConnection, addToHistory]);
 
   // ── Duplicate element ──
   const handleDuplicateElement = useCallback((id: string) => {
@@ -240,7 +250,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         id: generateId(source.type),
         name: `${source.name} (copy)`,
         position: { x: source.position.x + 30, y: source.position.y + 30 },
-        config: source.config ? { ...source.config } : undefined,
+        config: source.config ? { ...source.config } : {},
       };
 
       const updated = [...prev, newElement];
@@ -287,12 +297,14 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   };
 
   const addElement = useCallback((element: CanvasElement) => {
+    // Ensure config is always present
+    const el: CanvasElement = { ...element, config: element.config ?? {} };
     setElements(prev => {
-      const updated = [...prev, element];
+      const updated = [...prev, el];
       addToHistory(updated);
       return updated;
     });
-    setSelectedElementIds([element.id]);
+    setSelectedElementIds([el.id]);
   }, [addToHistory]);
 
   React.useImperativeHandle(ref, () => ({
@@ -340,16 +352,13 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.length > 0) {
         e.preventDefault();
-        // Use cascade delete for each selected element
-        selectedElementIds.forEach(id => handleDeleteElement(id));
-        setSelectedElementIds([]);
-        setShowMultiSettings(false);
+        handleDeleteMultiple(selectedElementIds);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, connections, removeConnection, onUndo, onRedo, handleDeleteElement]);
+  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, onUndo, onRedo, handleDeleteMultiple]);
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
