@@ -272,8 +272,13 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     getViewport: () => viewportRef.current,
   }), [tidyLayout, viewportRef]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (respects user preference)
+  const { preferences: userPrefs } = useUserSettings();
+  const kbShortcutsEnabled = userPrefs.keyboardShortcuts !== false;
+
   useEffect(() => {
+    if (!kbShortcutsEnabled) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
@@ -320,7 +325,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, undo, redo, pushSnapshot, handleDeleteMultiple, markDirty, setElements, setSelectedElementIds]);
+  }, [kbShortcutsEnabled, elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, undo, redo, pushSnapshot, handleDeleteMultiple, markDirty, setElements, setSelectedElementIds]);
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
