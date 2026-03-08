@@ -110,11 +110,11 @@
   }
 
   .glass-morphism {
-    @apply backdrop-blur-md bg-white/80 border border-white/20 shadow-sm;
+    @apply backdrop-blur-md bg-background/80 border border-border/50 shadow-sm;
   }
   
   .glass-dark {
-    @apply backdrop-blur-md bg-black/5 border border-black/10 shadow-sm;
+    @apply backdrop-blur-md bg-background/5 border border-border/30 shadow-sm;
   }
   
   .text-gradient {
