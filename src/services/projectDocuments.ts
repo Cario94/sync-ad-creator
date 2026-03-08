@@ -15,7 +15,7 @@ export const projectDocumentsService = {
   async save(projectId: string, canvasState: CanvasState, currentVersion: number) {
     const { data, error } = await supabase
       .from('project_documents')
-      .update({ canvas_state: canvasState as unknown as Record<string, unknown>, version: currentVersion + 1 })
+      .update({ canvas_state: JSON.parse(JSON.stringify(canvasState)), version: currentVersion + 1 })
       .eq('project_id', projectId)
       .select('version')
       .single();

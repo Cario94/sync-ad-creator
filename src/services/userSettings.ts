@@ -15,7 +15,7 @@ export const userSettingsService = {
   async update(userId: string, preferences: UserPreferences) {
     const { error } = await supabase
       .from('user_settings')
-      .update({ preferences: preferences as unknown as Record<string, unknown> })
+      .update({ preferences: JSON.parse(JSON.stringify(preferences)) })
       .eq('user_id', userId);
     if (error) throw error;
   },
