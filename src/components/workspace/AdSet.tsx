@@ -29,7 +29,7 @@ interface AdSetProps {
   viewport?: Viewport;
   containerRef?: React.RefObject<HTMLDivElement>;
   snapSize?: number;
-  onDragEnd?: () => void;
+  onDragEnd?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const AdSet: React.FC<AdSetProps> = ({

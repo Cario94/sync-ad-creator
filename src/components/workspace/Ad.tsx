@@ -28,7 +28,7 @@ interface AdProps {
   viewport?: Viewport;
   containerRef?: React.RefObject<HTMLDivElement>;
   snapSize?: number;
-  onDragEnd?: () => void;
+  onDragEnd?: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const Ad: React.FC<AdProps> = ({
