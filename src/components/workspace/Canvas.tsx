@@ -6,6 +6,7 @@ import { CanvasElement } from './types/canvas';
 import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
 import { useConnections, Connection } from '@/hooks/useConnections';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { toast } from 'sonner';
 import MultiSelectSettings from './MultiSelectSettings';
 import ValidationPanel from './ValidationPanel';
