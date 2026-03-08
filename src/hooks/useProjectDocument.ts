@@ -80,8 +80,13 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
 
         if (doc) {
           const cs = doc.canvas_state;
+          // Ensure every node has a config object for roundtrip safety
+          const nodes = ((cs.nodes ?? []) as unknown as CanvasElement[]).map(n => ({
+            ...n,
+            config: n.config ?? {},
+          }));
           setDocumentState({
-            elements: (cs.nodes ?? []) as unknown as CanvasElement[],
+            elements: nodes,
             connections: (cs.edges ?? []) as unknown as StoredEdge[],
             viewport: cs.viewport ?? BLANK_CANVAS_STATE.viewport,
           });

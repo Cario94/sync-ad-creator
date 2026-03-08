@@ -158,6 +158,7 @@ const Workspace = () => {
       type: 'campaign',
       name: `Campaign ${elementsRef.current.filter(e => e.type === 'campaign').length + 1}`,
       position: findOpenPosition('campaign'),
+      config: {},
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Campaign created');
@@ -177,6 +178,7 @@ const Workspace = () => {
       type: 'adset',
       name: `Ad Set ${elementsRef.current.filter(e => e.type === 'adset').length + 1}`,
       position: findOpenPosition('adset'),
+      config: {},
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad Set created');
@@ -196,6 +198,7 @@ const Workspace = () => {
       type: 'ad',
       name: `Ad ${elementsRef.current.filter(e => e.type === 'ad').length + 1}`,
       position: findOpenPosition('ad'),
+      config: {},
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad created');

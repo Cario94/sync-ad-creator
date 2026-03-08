@@ -4,7 +4,7 @@ export interface CanvasElement {
   type: 'campaign' | 'adset' | 'ad';
   name: string;
   position: { x: number; y: number };
-  config?: Record<string, unknown>;
+  config: Record<string, unknown>;
 }
 
 export interface ElementPosition {

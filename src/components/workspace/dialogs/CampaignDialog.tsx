@@ -1,33 +1,20 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { CalendarIcon, Save, Trash, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface CampaignDialogProps {
@@ -53,57 +40,48 @@ interface CampaignDialogProps {
   onDelete?: () => void;
 }
 
+const defaultFormData = (campaign?: CampaignDialogProps['campaign']) => ({
+  name: campaign?.name || '',
+  objective: campaign?.objective || 'awareness',
+  budget: campaign?.budget || 50,
+  specialAdCategory: campaign?.specialAdCategory || false,
+  campaignSpendingLimit: campaign?.campaignSpendingLimit || '',
+  abTesting: campaign?.abTesting || false,
+  buyingType: campaign?.buyingType || 'auction',
+  budgetOptimization: campaign?.budgetOptimization !== undefined ? campaign.budgetOptimization : true,
+  bidStrategy: campaign?.bidStrategy || 'lowest_cost',
+  startDate: campaign?.startDate || new Date(),
+  endDate: campaign?.endDate || undefined,
+  adStrategyType: campaign?.adStrategyType || 'standard',
+  placementStrategy: campaign?.placementStrategy !== undefined ? campaign.placementStrategy : true,
+});
+
 const CampaignDialog: React.FC<CampaignDialogProps> = ({
-  open,
-  onOpenChange,
-  campaign,
-  onSave,
-  onDelete
+  open, onOpenChange, campaign, onSave, onDelete
 }) => {
   const isEditing = !!campaign;
-  const [formData, setFormData] = useState({
-    name: campaign?.name || '',
-    objective: campaign?.objective || 'awareness',
-    budget: campaign?.budget || 50,
-    specialAdCategory: campaign?.specialAdCategory || false,
-    campaignSpendingLimit: campaign?.campaignSpendingLimit || '',
-    abTesting: campaign?.abTesting || false,
-    buyingType: campaign?.buyingType || 'auction',
-    budgetOptimization: campaign?.budgetOptimization || true,
-    bidStrategy: campaign?.bidStrategy || 'lowest_cost',
-    startDate: campaign?.startDate || new Date(),
-    endDate: campaign?.endDate || undefined,
-    adStrategyType: campaign?.adStrategyType || 'standard',
-    placementStrategy: campaign?.placementStrategy || true,
-  });
+  const [formData, setFormData] = useState(defaultFormData(campaign));
+
+  // Re-sync form state when dialog opens or campaign prop changes
+  useEffect(() => {
+    if (open) setFormData(defaultFormData(campaign));
+  }, [open, campaign?.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value
-    }));
+    setFormData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked
-    }));
+    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleDateChange = (name: string, date: Date | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: date
-    }));
+    setFormData(prev => ({ ...prev, [name]: date }));
   };
 
   const handleSave = () => {
@@ -111,11 +89,7 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
       toast.error("Campaign name is required");
       return;
     }
-    
-    onSave({ 
-      ...campaign, 
-      ...formData 
-    });
+    onSave({ ...campaign, ...formData });
     onOpenChange(false);
     toast.success(`Campaign ${isEditing ? 'updated' : 'created'} successfully`);
   };
@@ -144,29 +118,17 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
             <TabsTrigger value="advanced">Advanced Settings</TabsTrigger>
           </TabsList>
 
-          {/* Campaign Details Tab */}
           <TabsContent value="details" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Campaign Name</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formData.name} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter campaign name" 
-                />
+                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter campaign name" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="objective">Objective</Label>
-                <Select 
-                  value={formData.objective} 
-                  onValueChange={(value) => handleSelectChange('objective', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select objective" />
-                  </SelectTrigger>
+                <Select value={formData.objective} onValueChange={(v) => handleSelectChange('objective', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select objective" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="awareness">Awareness</SelectItem>
                     <SelectItem value="traffic">Traffic</SelectItem>
@@ -179,48 +141,24 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="specialAdCategory" 
-                  checked={formData.specialAdCategory} 
-                  onCheckedChange={(checked) => 
-                    handleCheckboxChange('specialAdCategory', checked === true)}
-                />
-                <Label htmlFor="specialAdCategory">
-                  Special Ad Category (Credit, Housing, Employment)
-                </Label>
+                <Checkbox id="specialAdCategory" checked={formData.specialAdCategory} onCheckedChange={(c) => handleCheckboxChange('specialAdCategory', c === true)} />
+                <Label htmlFor="specialAdCategory">Special Ad Category (Credit, Housing, Employment)</Label>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="campaignSpendingLimit">Campaign Spending Limit (Optional)</Label>
-                <Input 
-                  id="campaignSpendingLimit" 
-                  name="campaignSpendingLimit" 
-                  type="number" 
-                  value={formData.campaignSpendingLimit} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter spending limit" 
-                />
+                <Input id="campaignSpendingLimit" name="campaignSpendingLimit" type="number" value={formData.campaignSpendingLimit} onChange={handleInputChange} placeholder="Enter spending limit" />
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="abTesting" 
-                  checked={formData.abTesting} 
-                  onCheckedChange={(checked) => 
-                    handleCheckboxChange('abTesting', checked === true)}
-                />
+                <Checkbox id="abTesting" checked={formData.abTesting} onCheckedChange={(c) => handleCheckboxChange('abTesting', c === true)} />
                 <Label htmlFor="abTesting">Enable A/B Testing</Label>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="buyingType">Buying Type</Label>
-                <Select 
-                  value={formData.buyingType} 
-                  onValueChange={(value) => handleSelectChange('buyingType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select buying type" />
-                  </SelectTrigger>
+                <Select value={formData.buyingType} onValueChange={(v) => handleSelectChange('buyingType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select buying type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auction">Auction (Default)</SelectItem>
                     <SelectItem value="reach_frequency">Reach & Frequency</SelectItem>
@@ -230,40 +168,22 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
             </div>
           </TabsContent>
 
-          {/* Targeting & Budget Tab */}
           <TabsContent value="targeting" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="budgetOptimization" 
-                  checked={formData.budgetOptimization} 
-                  onCheckedChange={(checked) => 
-                    handleCheckboxChange('budgetOptimization', checked === true)}
-                />
+                <Checkbox id="budgetOptimization" checked={formData.budgetOptimization} onCheckedChange={(c) => handleCheckboxChange('budgetOptimization', c === true)} />
                 <Label htmlFor="budgetOptimization">Campaign Budget Optimization</Label>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="budget">Daily Budget</Label>
-                <Input 
-                  id="budget" 
-                  name="budget" 
-                  type="number" 
-                  value={formData.budget} 
-                  onChange={handleInputChange} 
-                  placeholder="Enter daily budget" 
-                />
+                <Input id="budget" name="budget" type="number" value={formData.budget} onChange={handleInputChange} placeholder="Enter daily budget" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="bidStrategy">Bid Strategy</Label>
-                <Select 
-                  value={formData.bidStrategy} 
-                  onValueChange={(value) => handleSelectChange('bidStrategy', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bid strategy" />
-                  </SelectTrigger>
+                <Select value={formData.bidStrategy} onValueChange={(v) => handleSelectChange('bidStrategy', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select bid strategy" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lowest_cost">Lowest Cost</SelectItem>
                     <SelectItem value="cost_cap">Cost Cap</SelectItem>
@@ -277,54 +197,27 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
                   <Label>Start Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
+                      <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.startDate ? (
-                          format(formData.startDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {formData.startDate ? format(formData.startDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.startDate}
-                        onSelect={(date) => handleDateChange('startDate', date)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={formData.startDate} onSelect={(d) => handleDateChange('startDate', d)} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
-
                 <div className="space-y-2">
                   <Label>End Date (Optional)</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left"
-                      >
+                      <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.endDate ? (
-                          format(formData.endDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {formData.endDate ? format(formData.endDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={formData.endDate}
-                        onSelect={(date) => handleDateChange('endDate', date)}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={formData.endDate} onSelect={(d) => handleDateChange('endDate', d)} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -332,18 +225,12 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
             </div>
           </TabsContent>
 
-          {/* Advanced Settings Tab */}
           <TabsContent value="advanced" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="adStrategyType">Ad Strategy Type</Label>
-                <Select 
-                  value={formData.adStrategyType} 
-                  onValueChange={(value) => handleSelectChange('adStrategyType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select strategy type" />
-                  </SelectTrigger>
+                <Select value={formData.adStrategyType} onValueChange={(v) => handleSelectChange('adStrategyType', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select strategy type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="standard">Standard</SelectItem>
                     <SelectItem value="advantage_plus">Advantage+</SelectItem>
@@ -352,23 +239,14 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="placementStrategy" 
-                  checked={formData.placementStrategy} 
-                  onCheckedChange={(checked) => 
-                    handleCheckboxChange('placementStrategy', checked === true)}
-                />
-                <Label htmlFor="placementStrategy">
-                  Auto Placement (Recommended)
-                </Label>
+                <Checkbox id="placementStrategy" checked={formData.placementStrategy} onCheckedChange={(c) => handleCheckboxChange('placementStrategy', c === true)} />
+                <Label htmlFor="placementStrategy">Auto Placement (Recommended)</Label>
               </div>
 
               {isEditing && (
                 <div className="space-y-2">
                   <Label>Campaign ID</Label>
-                  <div className="p-2 bg-secondary/30 rounded-md border border-border text-muted-foreground">
-                    {campaign.id}
-                  </div>
+                  <div className="p-2 bg-secondary/30 rounded-md border border-border text-muted-foreground">{campaign!.id}</div>
                 </div>
               )}
             </div>
@@ -379,19 +257,16 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
           <div className="flex space-x-2">
             {isEditing && (
               <Button variant="destructive" onClick={handleDelete}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
+                <Trash className="mr-2 h-4 w-4" />Delete
               </Button>
             )}
           </div>
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
+              <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
+              <Save className="mr-2 h-4 w-4" />Save
             </Button>
           </div>
         </DialogFooter>
