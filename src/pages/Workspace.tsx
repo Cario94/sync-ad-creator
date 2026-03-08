@@ -86,11 +86,13 @@ function WorkspaceInner() {
     }
   };
 
-  // Ctrl/Cmd+S shortcut
+  // Ctrl/Cmd+S shortcut (respects keyboardShortcuts pref)
   const handleSaveRef = useRef(handleSave);
   handleSaveRef.current = handleSave;
+  const kbEnabled = preferences.keyboardShortcuts !== false;
 
   React.useEffect(() => {
+    if (!kbEnabled) return;
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
@@ -99,7 +101,17 @@ function WorkspaceInner() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [kbEnabled]);
+
+  // Auto-save: debounced save when status is 'unsaved'
+  const autoSaveEnabled = preferences.autoSave !== false;
+  React.useEffect(() => {
+    if (!autoSaveEnabled || saveStatus !== 'unsaved') return;
+    const timer = setTimeout(() => {
+      handleSaveRef.current();
+    }, 5000); // 5s debounce
+    return () => clearTimeout(timer);
+  }, [autoSaveEnabled, saveStatus]);
 
   const handleLogout = async () => {
     await signOut();
