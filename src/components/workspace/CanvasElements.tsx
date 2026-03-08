@@ -33,7 +33,7 @@ interface CanvasElementsProps {
   containerRef: React.RefObject<HTMLDivElement>;
   snapSize: number;
   worldMousePos: { x: number; y: number };
-  onDragEnd: () => void;
+  onDragEnd: (id: string, pos: { x: number; y: number }) => void;
 }
 
 const CanvasElements: React.FC<CanvasElementsProps> = ({
@@ -72,13 +72,19 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   });
 
   // Cancel in-progress connection on mouseup in empty space
+  // Use a small delay so completeConnection in node mousedown can fire first
+  const cancelRef = React.useRef(onCancelConnection);
+  cancelRef.current = onCancelConnection;
+
   React.useEffect(() => {
     if (!isCreatingConnection) return;
-    const handleMouseUp = () => { onCancelConnection(); };
-    // We use capture so this fires even if the event is on the canvas background
+    const handleMouseUp = () => {
+      // Defer cancel to next microtask so completeConnection fires first if applicable
+      setTimeout(() => cancelRef.current(), 0);
+    };
     document.addEventListener('mouseup', handleMouseUp);
     return () => { document.removeEventListener('mouseup', handleMouseUp); };
-  }, [isCreatingConnection, onCancelConnection]);
+  }, [isCreatingConnection]);
 
   return (
     <>
@@ -111,7 +117,7 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
         onDuplicateElement={onDuplicateElement}
         getCampaigns={getCampaigns}
         getAdSets={getAdSets}
-        elementRefs={() => {}} // No longer needed for DOM measurement
+        elementRefs={() => {}}
         viewport={viewport}
         containerRef={containerRef}
         snapSize={snapSize}
