@@ -141,7 +141,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
       viewport: viewportRef.current,
     };
     await rawSave(state);
-  }, [elements, connections, rawSave]);
+    // Log canvas save (fire-and-forget)
+    if (user && projectId) {
+      activityLogsService.canvasSaved(user.id, projectId, versionRef.current);
+    }
+  }, [elements, connections, rawSave, user, projectId]);
 
   // ── History helpers (use refs for latest state) ──
   const elementsRef = useRef(elements);
