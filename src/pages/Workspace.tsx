@@ -63,7 +63,7 @@ function WorkspaceInner() {
   const {
     isLoading, error, saveStatus, save,
     addCampaign, addAdSet, addAd,
-    undo, redo,
+    undo, redo, elements, connections,
   } = useWorkspace();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
