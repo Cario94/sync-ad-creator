@@ -123,6 +123,7 @@ const Campaign: React.FC<CampaignProps> = ({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
+          <NodeValidationBadge errors={errCount} warnings={warnCount} />
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary/30">
               <Megaphone className="h-5 w-5 text-primary" />
