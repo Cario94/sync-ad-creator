@@ -31,13 +31,15 @@ const Workspace = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<CanvasRef>(null);
+  const { user, signOut } = useAuth();
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out."
     });
-    navigate('/');
+    navigate('/login');
   };
 
   const handleMediaSelect = (media: MediaItem) => {
