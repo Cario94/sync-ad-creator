@@ -19,6 +19,7 @@ import { MediaItem } from '@/hooks/useMediaLibrary';
 import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Workspace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
