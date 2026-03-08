@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Canvas, { CanvasRef } from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import {
   Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle,
+  Download, FileJson, FileSpreadsheet, FileText, Copy,
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +16,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import type { SaveStatus } from '@/hooks/useProjectDocument';
-import { useState } from 'react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { exportJSON, exportCSV, exportMarkdown, copyToClipboard } from '@/lib/exportUtils';
+import { toast as sonnerToast } from 'sonner';
 
 /** Small pill showing current save status */
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
