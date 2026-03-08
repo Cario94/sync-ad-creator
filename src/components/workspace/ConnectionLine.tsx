@@ -1,7 +1,5 @@
-
-import React, { useRef, useState } from 'react';
+import React, { useState, useId } from 'react';
 import { Connection } from '@/hooks/useConnections';
-import { X } from 'lucide-react';
 
 interface ElementPosition {
   id: string;
@@ -17,105 +15,147 @@ interface ConnectionLineProps {
   onRemove: (id: string) => void;
 }
 
-const ConnectionLine: React.FC<ConnectionLineProps> = ({ 
-  connection, 
+/** Build a smooth cubic-bezier from source right-center to target left-center */
+function buildEdgePath(
+  sx: number, sy: number,
+  tx: number, ty: number,
+) {
+  // Horizontal offset for control points — adapts to distance
+  const dx = Math.abs(tx - sx);
+  const offset = Math.max(40, Math.min(dx * 0.45, 180));
+
+  return `M ${sx} ${sy} C ${sx + offset} ${sy}, ${tx - offset} ${ty}, ${tx} ${ty}`;
+}
+
+/** Point along cubic bezier at t ∈ [0,1] */
+function bezierPoint(
+  sx: number, sy: number,
+  c1x: number, c1y: number,
+  c2x: number, c2y: number,
+  tx: number, ty: number,
+  t: number,
+) {
+  const u = 1 - t;
+  return {
+    x: u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * tx,
+    y: u * u * u * sy + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * ty,
+  };
+}
+
+const ConnectionLine: React.FC<ConnectionLineProps> = ({
+  connection,
   elementPositions,
-  onRemove
+  onRemove,
 }) => {
   const [hover, setHover] = useState(false);
-  
-  const sourceElement = elementPositions.find(el => el.id === connection.sourceId);
-  const targetElement = elementPositions.find(el => el.id === connection.targetId);
-  
-  if (!sourceElement || !targetElement) return null;
-  
-  // Calculate start and end points with improved positioning
-  const sourceX = sourceElement.x + sourceElement.width;
-  const sourceY = sourceElement.y + sourceElement.height / 2;
-  
-  const targetX = targetElement.x;
-  const targetY = targetElement.y + targetElement.height / 2;
-  
-  // Adjust control points for a smoother curve
-  const dx = Math.abs(targetX - sourceX);
-  const controlOffsetX = Math.min(dx * 0.5, 150);
-  
-  // Create the path for the curved line with better curvature
-  const pathData = `M ${sourceX} ${sourceY} 
-                    C ${sourceX + controlOffsetX} ${sourceY}, 
-                      ${targetX - controlOffsetX} ${targetY}, 
-                      ${targetX} ${targetY}`;
-  
-  // Calculate midpoint for delete button
-  const midX = (sourceX + targetX) / 2;
-  const midY = (sourceY + targetY) / 2 - 15;
-  
-  // Calculate points for arrow tail at the source
-  const tailLength = 10;
-  const tailPoints = `${sourceX},${sourceY} ${sourceX-tailLength},${sourceY-6} ${sourceX-5},${sourceY} ${sourceX-tailLength},${sourceY+6}`;
-  
+  const uid = useId();
+
+  const sourceEl = elementPositions.find(el => el.id === connection.sourceId);
+  const targetEl = elementPositions.find(el => el.id === connection.targetId);
+  if (!sourceEl || !targetEl) return null;
+
+  // Anchors: right-center of source, left-center of target
+  const sx = sourceEl.x + sourceEl.width;
+  const sy = sourceEl.y + sourceEl.height / 2;
+  const tx = targetEl.x;
+  const ty = targetEl.y + targetEl.height / 2;
+
+  const dx = Math.abs(tx - sx);
+  const offset = Math.max(40, Math.min(dx * 0.45, 180));
+
+  const pathData = buildEdgePath(sx, sy, tx, ty);
+
+  // Midpoint for delete button
+  const mid = bezierPoint(sx, sy, sx + offset, sy, tx - offset, ty, tx, ty, 0.5);
+
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     onRemove(connection.id);
   };
-  
+
+  const markerId = `arrow-${uid}`;
+  const strokeColor = hover ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.55)';
+  const strokeW = hover ? 2.5 : 1.8;
+
   return (
-    <g 
+    <g
       className="connection-line"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Base connection path with smooth rendering */}
+      {/* Arrowhead marker */}
+      <defs>
+        <marker
+          id={markerId}
+          viewBox="0 0 10 8"
+          refX="9"
+          refY="4"
+          markerWidth="10"
+          markerHeight="8"
+          orient="auto-start-reverse"
+          markerUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 0 0.5 L 9 4 L 0 7.5 Z"
+            fill={strokeColor}
+            style={{ transition: 'fill 0.15s ease-out' }}
+          />
+        </marker>
+      </defs>
+
+      {/* Invisible wider hit-area for hover detection */}
       <path
         d={pathData}
         fill="none"
-        stroke={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-        strokeWidth={hover ? 3 : 2}
-        strokeDasharray={hover ? "none" : "5,5"}
-        style={{ 
-          transition: 'all 0.15s ease-out',
-          vectorEffect: 'non-scaling-stroke'
+        stroke="transparent"
+        strokeWidth={16}
+        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+      />
+
+      {/* Visible edge */}
+      <path
+        d={pathData}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={strokeW}
+        markerEnd={`url(#${markerId})`}
+        strokeLinecap="round"
+        style={{
+          transition: 'stroke 0.15s ease-out, stroke-width 0.15s ease-out',
+          pointerEvents: 'none',
         }}
       />
-      
-      {/* Arrow tail at the source */}
-      <polygon 
-        points={tailPoints}
-        fill={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-        stroke="none"
-        style={{ transition: 'fill 0.15s ease-out' }}
+
+      {/* Small source dot */}
+      <circle
+        cx={sx}
+        cy={sy}
+        r={hover ? 4 : 3}
+        fill={strokeColor}
+        style={{ transition: 'all 0.15s ease-out', pointerEvents: 'none' }}
       />
-      
-      {/* Improved arrow head at the target */}
-      <polygon 
-        points={`${targetX},${targetY} ${targetX-10},${targetY-6} ${targetX-5},${targetY} ${targetX-10},${targetY+6}`}
-        fill={hover ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-        stroke="none"
-        style={{ transition: 'fill 0.15s ease-out' }}
-      />
-      
-      {/* Delete button (only shows on hover) */}
+
+      {/* Delete button on hover */}
       {hover && (
-        <g 
-          transform={`translate(${midX}, ${midY})`}
+        <g
+          transform={`translate(${mid.x}, ${mid.y})`}
           onClick={handleRemove}
           style={{ cursor: 'pointer' }}
         >
-          <circle 
-            r={12}
-            fill="var(--destructive)"
-            stroke="white"
+          <circle
+            r={10}
+            fill="hsl(var(--destructive))"
+            stroke="hsl(var(--background))"
             strokeWidth={1.5}
           />
-          <foreignObject x={-6} y={-6} width={12} height={12}>
-            <div className="h-full w-full flex items-center justify-center">
-              <X size={10} className="text-white" />
-            </div>
-          </foreignObject>
+          {/* Pure SVG × icon — no foreignObject */}
+          <line x1={-3.5} y1={-3.5} x2={3.5} y2={3.5} stroke="white" strokeWidth={1.8} strokeLinecap="round" />
+          <line x1={3.5} y1={-3.5} x2={-3.5} y2={3.5} stroke="white" strokeWidth={1.8} strokeLinecap="round" />
         </g>
       )}
     </g>
   );
 };
 
+export { buildEdgePath };
 export default ConnectionLine;
