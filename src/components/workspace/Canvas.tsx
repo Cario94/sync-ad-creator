@@ -8,6 +8,7 @@ import { useConnections, Connection } from '@/hooks/useConnections';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 import MultiSelectSettings from './MultiSelectSettings';
+import ValidationPanel from './ValidationPanel';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface CanvasProps {
