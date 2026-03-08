@@ -47,7 +47,6 @@ export const BLANK_CANVAS_STATE: CanvasState = {
 export interface UserPreferences {
   theme?: 'light' | 'dark';
   timezone?: string;
-  defaultWorkspaceView?: 'canvas' | 'list' | 'grid';
   autoSave?: boolean;
   keyboardShortcuts?: boolean;
   notifications?: {
@@ -55,12 +54,13 @@ export interface UserPreferences {
     statusChanges?: boolean;
     push?: boolean;
   };
+  /** @deprecated Kept for backward compat with stored data; not used in UI */
+  defaultWorkspaceView?: string;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  defaultWorkspaceView: 'canvas',
   autoSave: true,
   keyboardShortcuts: true,
   notifications: { emailReports: true, statusChanges: false, push: true },
