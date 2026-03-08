@@ -20,6 +20,7 @@ interface Snapshot {
 
 export interface WorkspaceState {
   projectId: string | null;
+  projectName: string;
   isLoading: boolean;
   error: string | null;
   saveStatus: SaveStatus;
