@@ -97,7 +97,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
         <div 
           key={item.id} 
           className={`
-            group bg-white border border-border rounded-lg overflow-hidden flex flex-col transition-all duration-200
+            group bg-card border border-border rounded-lg overflow-hidden flex flex-col transition-all duration-200
             ${selectable ? 'cursor-pointer hover:border-primary hover:shadow-md' : ''}
           `}
           onClick={selectable ? () => handleSelect(item) : undefined}
