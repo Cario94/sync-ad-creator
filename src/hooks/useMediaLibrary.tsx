@@ -1,17 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { mediaAssetsService } from '@/services/mediaAssets';
+import { mediaAssetsService, getPublicUrl } from '@/services/mediaAssets';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface MediaItem {
   id: string;
   name: string;
   url: string;
+  storagePath: string;
   type: string;
   size: number;
   dimensions?: { width: number; height: number };
   uploadedAt: Date;
   thumbnailUrl?: string;
+}
+
+/** Read image dimensions from a File (best-effort, images only) */
+function readImageDimensions(file: File): Promise<{ width: number; height: number } | undefined> {
+  return new Promise(resolve => {
+    if (!file.type.startsWith('image/')) { resolve(undefined); return; }
+    const img = new Image();
+    img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(img.src); };
+    img.onerror = () => { resolve(undefined); URL.revokeObjectURL(img.src); };
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 /** Map a DB row to the UI shape */
@@ -28,7 +40,8 @@ function toMediaItem(row: {
   return {
     id: row.id,
     name: row.name,
-    url: row.storage_path, // will resolve to a real URL once storage is wired
+    url: getPublicUrl(row.storage_path),
+    storagePath: row.storage_path,
     type: row.file_type,
     size: row.file_size ?? 0,
     dimensions: dims ?? undefined,
@@ -70,41 +83,42 @@ export function useMediaLibrary() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Upload – placeholder until storage bucket is created
-  const uploadMedia = useCallback(async (file: File, _onProgress?: (progress: number) => void): Promise<MediaItem> => {
+  // Upload — real storage upload
+  const uploadMedia = useCallback(async (file: File, onProgress?: (progress: number) => void): Promise<MediaItem> => {
     if (!user) throw new Error('Not authenticated');
 
     // Validate
     if (file.size > 100 * 1024 * 1024) {
       throw new Error('File size exceeds 100MB limit');
     }
-    const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime'];
     if (!allowedTypes.includes(file.type)) {
-      throw new Error('File type not supported. Please upload JPG, PNG, MP4, or MOV files');
+      throw new Error('File type not supported. Please upload JPG, PNG, GIF, WebP, MP4, or MOV files');
     }
 
-    // TODO: upload file to storage bucket, then persist path
-    // For now, create metadata record with a placeholder path
-    const row = await mediaAssetsService.create({
-      user_id: user.id,
-      name: file.name,
-      storage_path: `pending/${user.id}/${file.name}`,
-      file_type: file.type,
-      file_size: file.size,
-    });
+    // Simulate initial progress (Supabase SDK doesn't expose upload progress)
+    onProgress?.(10);
+
+    // Read dimensions for images
+    const dimensions = await readImageDimensions(file);
+    onProgress?.(20);
+
+    const row = await mediaAssetsService.upload(user.id, file, { dimensions });
+    onProgress?.(100);
 
     const item = toMediaItem(row);
     setMediaItems(prev => [item, ...prev]);
-    toast.success('Media record created');
+    toast.success('Media uploaded');
     return item;
   }, [user]);
 
-  // Delete
+  // Delete — removes storage file + DB row
   const deleteMedia = useCallback(async (id: string): Promise<void> => {
-    await mediaAssetsService.remove(id);
-    setMediaItems(prev => prev.filter(item => item.id !== id));
-    toast.success('Media deleted successfully');
-  }, []);
+    const item = mediaItems.find(m => m.id === id);
+    await mediaAssetsService.remove(id, item?.storagePath);
+    setMediaItems(prev => prev.filter(m => m.id !== id));
+    toast.success('Media deleted');
+  }, [mediaItems]);
 
   // Filter
   const filterMedia = useCallback((searchQuery: string): MediaItem[] => {
