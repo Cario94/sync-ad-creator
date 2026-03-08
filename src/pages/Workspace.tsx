@@ -217,7 +217,7 @@ const Workspace = () => {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center gap-4 bg-background">
         <p className="text-destructive">{error}</p>
-        <Button onClick={() => navigate('/')}>Go Home</Button>
+        <Button onClick={() => navigate('/dashboard')}>Back to Projects</Button>
       </div>
     );
   }
