@@ -70,8 +70,8 @@ const Header = () => {
           </Link>
           <div className="flex items-center space-x-4">
             {session ? (
-              <Link to="/workspace">
-                <Button className="font-medium px-6">Go to Workspace</Button>
+              <Link to="/dashboard">
+                <Button className="font-medium px-6">Go to Dashboard</Button>
               </Link>
             ) : (
               <>
