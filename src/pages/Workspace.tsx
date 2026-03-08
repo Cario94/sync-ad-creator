@@ -105,8 +105,8 @@ const Workspace = () => {
               <User className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <div className="font-medium">John Doe</div>
-              <div className="text-xs text-muted-foreground">john@example.com</div>
+              <div className="font-medium">{user?.user_metadata?.full_name || 'User'}</div>
+              <div className="text-xs text-muted-foreground">{user?.email || ''}</div>
             </div>
           </div>
           <Button 
