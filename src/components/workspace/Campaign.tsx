@@ -5,6 +5,7 @@ import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement } from './types/canvas';
+import { fromDateString } from '@/lib/dateUtils';
 
 interface CampaignProps {
   name: string;
