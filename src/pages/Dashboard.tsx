@@ -97,6 +97,7 @@ const Dashboard = () => {
       setNewName('');
       setNewDescription('');
       toast.success('Project created');
+      activityLogsService.projectCreated(user.id, project.id, project.name);
       navigate(`/workspace/${project.id}`);
     } catch {
       toast.error('Failed to create project');
