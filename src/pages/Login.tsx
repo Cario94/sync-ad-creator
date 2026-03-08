@@ -12,6 +12,8 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [showVerificationHint, setShowVerificationHint] = useState(false);
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,11 +26,18 @@ const Login = () => {
     
     setIsLoading(true);
     
+    setShowVerificationHint(false);
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        toast.error(error.message);
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setShowVerificationHint(true);
+          toast.error('Please verify your email before signing in.');
+        } else {
+          toast.error(error.message);
+        }
         return;
       }
       
@@ -43,6 +52,26 @@ const Login = () => {
   
   const handleMetaLogin = () => {
     toast('Meta login integration coming soon');
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error('Please enter your email first');
+      return;
+    }
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Verification email resent! Check your inbox.');
+      }
+    } catch {
+      toast.error('Failed to resend. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
   
   return (
@@ -96,6 +125,20 @@ const Login = () => {
               />
             </div>
             
+            {showVerificationHint && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground space-y-2">
+                <p>Your email hasn't been verified yet. Check your inbox for the confirmation link.</p>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-primary"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                >
+                  {isResending ? 'Resending...' : 'Resend verification email'}
+                </Button>
+              </div>
+            )}
+
             <Button 
               type="submit" 
               className="w-full h-11" 

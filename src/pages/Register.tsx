@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Facebook } from 'lucide-react';
+import { Facebook, Mail } from 'lucide-react';
 import AnimatedGradient from '@/components/ui/AnimatedGradient';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,9 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,14 +56,12 @@ const Register = () => {
         return;
       }
       
-      // If session exists, user is auto-confirmed → go to workspace
       if (data.session) {
         toast.success('Account created successfully!');
         navigate('/workspace');
       } else {
-        // Email confirmation required
-        toast.success('Account created! Check your email to confirm your account.');
-        navigate('/login');
+        setRegisteredEmail(email);
+        setPendingVerification(true);
       }
     } catch (error) {
       toast.error('Registration failed. Please try again.');
@@ -72,6 +73,64 @@ const Register = () => {
   const handleMetaSignup = () => {
     toast('Meta signup integration coming soon');
   };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Verification email resent!');
+      }
+    } catch {
+      toast.error('Failed to resend. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  if (pendingVerification) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <AnimatedGradient />
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Link to="/" className="text-2xl font-bold text-gradient inline-block">
+              CampaignSync
+            </Link>
+            <h1 className="text-2xl font-bold mt-6 mb-2">Check your inbox</h1>
+            <p className="text-muted-foreground">
+              We sent a verification link to your email
+            </p>
+          </div>
+          <div className="glass-morphism rounded-xl p-8 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation email to <strong>{registeredEmail}</strong>. Click the link in the email to activate your account.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full h-11"
+              onClick={handleResendVerification}
+              disabled={isResending}
+            >
+              {isResending ? 'Resending...' : 'Resend verification email'}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Already verified?{' '}
+              <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
