@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
+import { toast as sonnerToast } from 'sonner';
 
 /** Small pill showing current save status */
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
