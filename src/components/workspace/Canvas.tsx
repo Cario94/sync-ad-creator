@@ -234,13 +234,24 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success('Layout organized successfully');
   };
 
+  // Add element programmatically
+  const addElement = useCallback((element: CanvasElement) => {
+    setElements(prev => {
+      const updated = [...prev, element];
+      addToHistory(updated);
+      return updated;
+    });
+    setSelectedElementIds([element.id]);
+  }, [addToHistory]);
+
   // Expose methods via ref — must include all deps to avoid stale closures
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
     getElements: () => elements,
     getConnections: () => connections,
     getViewport: () => ({ x: pan.x, y: pan.y, zoom: scale }),
-  }), [elements, connections, pan, scale, tidyLayout]);
+    addElement,
+  }), [elements, connections, pan, scale, tidyLayout, addElement]);
   
   // Keyboard shortcuts
   useEffect(() => {
