@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
+import type { Connection } from '@/hooks/useConnections';
 
 interface UseCanvasInteractionOptions {
   minScale?: number;
@@ -14,6 +15,12 @@ export interface SelectionRect {
   height: number;
 }
 
+/** A single snapshot of canvas state for undo/redo */
+export interface CanvasSnapshot {
+  elements: CanvasElement[];
+  connections: Connection[];
+}
+
 export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) => {
   const { minScale = 0.5, maxScale = 2 } = options;
   
@@ -24,10 +31,11 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
   const [clipboardItem, setClipboardItem] = useState<CanvasElement[] | null>(null);
-  const [history, setHistory] = useState<CanvasElement[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // ── Undo/redo: stores full snapshots (elements + connections) ──
+  const historyRef = useRef<CanvasSnapshot[]>([]);
+  const historyIndexRef = useRef(-1);
   
-  // Selection rectangle state
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState({ x: 0, y: 0 });
@@ -82,12 +90,9 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    if (isSelecting) {
-      setIsSelecting(false);
-    }
+    if (isSelecting) setIsSelecting(false);
   }, [isSelecting]);
 
-  /** Deep-clone an element with a new unique ID and offset position */
   const cloneElement = (el: CanvasElement, offsetX = 20, offsetY = 20): CanvasElement => ({
     ...el,
     id: `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -121,33 +126,32 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     return null;
   }, []);
 
-  const addToHistory = useCallback((state: CanvasElement[]) => {
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      return [...newHistory, state];
-    });
-    setHistoryIndex(prev => prev + 1);
+  /** Push a full snapshot to history. Trims forward history on new action. */
+  const addToHistory = useCallback((snapshot: CanvasSnapshot) => {
+    const idx = historyIndexRef.current;
+    historyRef.current = [...historyRef.current.slice(0, idx + 1), snapshot];
+    historyIndexRef.current = historyRef.current.length - 1;
   }, []);
 
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      setHistoryIndex(prev => prev - 1);
-      toast.info('Undo operation');
-      return history[historyIndex - 1];
+  const handleUndo = useCallback((): CanvasSnapshot | null => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current -= 1;
+      toast.info('Undo');
+      return historyRef.current[historyIndexRef.current];
     }
     toast.info('Nothing to undo');
     return null;
-  }, [history, historyIndex]);
+  }, []);
 
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(prev => prev + 1);
-      toast.info('Redo operation');
-      return history[historyIndex + 1];
+  const handleRedo = useCallback((): CanvasSnapshot | null => {
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyIndexRef.current += 1;
+      toast.info('Redo');
+      return historyRef.current[historyIndexRef.current];
     }
     toast.info('Nothing to redo');
     return null;
-  }, [history, historyIndex]);
+  }, []);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -155,82 +159,57 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
         setSpacePressed(true);
         if (canvasRef.current) canvasRef.current.style.cursor = 'grab';
       }
-      
       if (e.metaKey || e.ctrlKey) {
-        if (e.key === 'c' || e.key === 'v' || e.key === 'd') {
-          e.preventDefault();
-        } else if (e.key === 'z') {
-          e.preventDefault();
-        }
+        if (e.key === 'c' || e.key === 'v' || e.key === 'd') e.preventDefault();
+        else if (e.key === 'z') e.preventDefault();
       }
     };
-    
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setSpacePressed(false);
         if (canvasRef.current) canvasRef.current.style.cursor = 'default';
       }
     };
-    
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleRedo, handleUndo]);
+  }, []);
   
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const wheelHandler = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY * -0.005;
-        const newScale = Math.min(Math.max(scale + delta, minScale), maxScale);
-        setScale(newScale);
+        setScale(prev => Math.min(Math.max(prev + delta, minScale), maxScale));
         return;
       }
-      
       if (spacePressed) {
         e.preventDefault();
         setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
         return;
       }
-      
       const isTrackpadPan = Math.abs(e.deltaX) > 0 || (Math.abs(e.deltaY) < 50 && e.deltaMode === 0);
       if (isTrackpadPan && !e.shiftKey) {
         e.preventDefault();
         setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
     };
-    
     canvas.addEventListener('wheel', wheelHandler, { passive: false });
     return () => canvas.removeEventListener('wheel', wheelHandler);
   }, [scale, spacePressed, minScale, maxScale]);
   
   return {
-    canvasRef,
-    scale,
-    isDragging,
-    pan,
-    spacePressed,
-    selectionRect,
-    isSelecting,
-    handleZoomIn,
-    handleZoomOut,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    setScale,
-    setPan,
-    handleCopy,
-    handlePaste,
-    handleDuplicate,
-    handleUndo,
-    handleRedo,
-    addToHistory
+    canvasRef, scale, isDragging, pan, spacePressed,
+    selectionRect, isSelecting,
+    handleZoomIn, handleZoomOut,
+    handleMouseDown, handleMouseMove, handleMouseUp,
+    setScale, setPan,
+    handleCopy, handlePaste, handleDuplicate,
+    handleUndo, handleRedo, addToHistory
   };
 };
