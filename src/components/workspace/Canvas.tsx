@@ -272,25 +272,100 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 
   const tidyLayout = () => {
     pushSnapshot();
-    const campaigns = elements.filter(el => el.type === 'campaign');
-    const adsets = elements.filter(el => el.type === 'adset');
-    const ads = elements.filter(el => el.type === 'ad');
 
-    const startX = 100, startY = 100, horizontalSpacing = 350, verticalSpacing = 175;
+    const conns = connectionsRef.current;
+    const elMap = new Map(elements.map(el => [el.id, el]));
     const newElements = elements.map(el => ({ ...el }));
+    const posMap = new Map<string, { x: number; y: number }>();
 
-    campaigns.forEach((campaign, index) => {
-      const element = newElements.find(el => el.id === campaign.id);
-      if (element) element.position = { x: startX, y: startY + index * verticalSpacing };
-    });
-    adsets.forEach((adset, index) => {
-      const element = newElements.find(el => el.id === adset.id);
-      if (element) element.position = { x: startX + horizontalSpacing, y: startY + index * verticalSpacing };
-    });
-    ads.forEach((ad, index) => {
-      const element = newElements.find(el => el.id === ad.id);
-      if (element) element.position = { x: startX + horizontalSpacing * 2, y: startY + index * verticalSpacing };
-    });
+    // Build adjacency: parent → children
+    const childrenOf = new Map<string, string[]>();
+    const hasParent = new Set<string>();
+    for (const c of conns) {
+      if (!childrenOf.has(c.sourceId)) childrenOf.set(c.sourceId, []);
+      childrenOf.get(c.sourceId)!.push(c.targetId);
+      hasParent.add(c.targetId);
+    }
+
+    // Find roots: campaigns without parents, then any node without a parent
+    const roots = elements
+      .filter(el => !hasParent.has(el.id))
+      .sort((a, b) => {
+        const order = { campaign: 0, adset: 1, ad: 2 };
+        return (order[a.type] ?? 9) - (order[b.type] ?? 9);
+      });
+
+    // Layout constants
+    const COL_WIDTH = 340;   // horizontal spacing between hierarchy levels
+    const ROW_GAP = 40;      // vertical gap between sibling nodes
+    const GROUP_GAP = 60;    // extra vertical gap between top-level groups
+    const START_X = 100;
+    const START_Y = 100;
+
+    const NODE_HEIGHTS: Record<string, number> = {
+      campaign: 140, adset: 130, ad: 120,
+    };
+
+    let globalY = START_Y;
+    const placed = new Set<string>();
+
+    // Recursively lay out a subtree; returns total height consumed
+    const layoutSubtree = (nodeId: string, depth: number, yStart: number): number => {
+      if (placed.has(nodeId)) return 0;
+      placed.add(nodeId);
+
+      const el = elMap.get(nodeId);
+      if (!el) return 0;
+
+      const children = (childrenOf.get(nodeId) || []).filter(cid => !placed.has(cid));
+      const nodeH = NODE_HEIGHTS[el.type] || 120;
+      const x = START_X + depth * COL_WIDTH;
+
+      if (children.length === 0) {
+        posMap.set(nodeId, { x, y: yStart });
+        return nodeH;
+      }
+
+      // Lay out children first to determine their total height
+      let childY = yStart;
+      let totalChildH = 0;
+      for (let i = 0; i < children.length; i++) {
+        const ch = layoutSubtree(children[i], depth + 1, childY);
+        totalChildH += ch;
+        childY += ch + ROW_GAP;
+      }
+      totalChildH += ROW_GAP * (children.length - 1); // already added in loop, adjust
+      // Correct: childY - yStart - ROW_GAP = actual consumed height including gaps
+      const childrenSpan = childY - yStart - ROW_GAP;
+
+      // Center parent vertically relative to its children
+      const parentY = yStart + Math.max(0, childrenSpan - nodeH) / 2;
+      posMap.set(nodeId, { x, y: parentY });
+
+      return Math.max(nodeH, childrenSpan);
+    };
+
+    // Lay out each root and its subtree
+    for (const root of roots) {
+      const consumed = layoutSubtree(root.id, root.type === 'campaign' ? 0 : root.type === 'adset' ? 1 : 2, globalY);
+      globalY += consumed + GROUP_GAP;
+    }
+
+    // Place any remaining unvisited orphans at the bottom
+    for (const el of elements) {
+      if (!placed.has(el.id)) {
+        const depth = el.type === 'campaign' ? 0 : el.type === 'adset' ? 1 : 2;
+        posMap.set(el.id, { x: START_X + depth * COL_WIDTH, y: globalY });
+        globalY += (NODE_HEIGHTS[el.type] || 120) + ROW_GAP;
+        placed.add(el.id);
+      }
+    }
+
+    // Apply positions
+    for (const nel of newElements) {
+      const pos = posMap.get(nel.id);
+      if (pos) nel.position = pos;
+    }
 
     setElements(newElements);
     markDirty();
