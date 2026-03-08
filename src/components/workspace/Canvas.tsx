@@ -32,6 +32,7 @@ interface CanvasRef {
   getElements: () => CanvasElement[];
   getConnections: () => Connection[];
   getViewport: () => { x: number; y: number; zoom: number };
+  addElement: (element: CanvasElement) => void;
 }
 
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
