@@ -125,6 +125,20 @@ const Login = () => {
               />
             </div>
             
+            {showVerificationHint && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground space-y-2">
+                <p>Your email hasn't been verified yet. Check your inbox for the confirmation link.</p>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-primary"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                >
+                  {isResending ? 'Resending...' : 'Resend verification email'}
+                </Button>
+              </div>
+            )}
+
             <Button 
               type="submit" 
               className="w-full h-11" 
