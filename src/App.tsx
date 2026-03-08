@@ -36,6 +36,11 @@ const App = () => (
                 <Workspace />
               </ProtectedRoute>
             } />
+            <Route path="/workspace/:projectId" element={
+              <ProtectedRoute>
+                <Workspace />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

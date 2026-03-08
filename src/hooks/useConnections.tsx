@@ -97,6 +97,7 @@ export const useConnections = (initialConnections: Connection[] = []) => {
 
   return {
     connections,
+    setConnections,
     isCreatingConnection,
     activeConnection,
     startConnection,
