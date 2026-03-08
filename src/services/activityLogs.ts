@@ -19,12 +19,13 @@ interface LogPayload {
 export const activityLogsService = {
   /** Generic insert – all helpers delegate here */
   async log(entry: LogPayload) {
-    const { error } = await supabase.from('activity_logs').insert({
+    const row = {
       user_id: entry.user_id,
       action: entry.action,
       project_id: entry.project_id ?? null,
-      metadata: entry.metadata ?? null,
-    });
+      metadata: (entry.metadata as Record<string, unknown>) ?? null,
+    };
+    const { error } = await supabase.from('activity_logs').insert([row]);
     if (error) console.warn('[activity_log]', error.message);
     // Fire-and-forget – never throw; logging must not block UX
   },
