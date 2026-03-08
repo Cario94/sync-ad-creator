@@ -106,7 +106,24 @@ const AdSet: React.FC<AdSetProps> = ({
           ref={combinedRef}
           className={cn(
             "absolute p-4 w-66 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab relative",
-...
+            isDragging ? "cursor-grabbing shadow-lg opacity-90 z-50" : "z-10",
+            isSelected ? "ring-2 ring-primary shadow-lg z-20" : "",
+            isActiveConnection ? "ring-2 ring-primary" : "",
+            isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
+            "transition-all duration-150"
+          )}
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            minHeight: '130px',
+            width: '264px'
+          }}
+          onMouseDown={(e) => {
+            if (isCreatingConnection) handleConnectionComplete(e);
+            else handleMouseDown(e);
+          }}
+          onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
           <NodeValidationBadge errors={errCount} warnings={warnCount} />
