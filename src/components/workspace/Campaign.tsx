@@ -103,7 +103,7 @@ const Campaign: React.FC<CampaignProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 cursor-grab",
+            "absolute p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 cursor-grab relative",
             isDragging ? "cursor-grabbing shadow-xl opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-xl z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
