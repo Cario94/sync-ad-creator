@@ -39,7 +39,7 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -53,8 +53,15 @@ const Register = () => {
         return;
       }
       
-      toast.success('Account created! Check your email to confirm your account.');
-      navigate('/login');
+      // If session exists, user is auto-confirmed → go to workspace
+      if (data.session) {
+        toast.success('Account created successfully!');
+        navigate('/workspace');
+      } else {
+        // Email confirmation required
+        toast.success('Account created! Check your email to confirm your account.');
+        navigate('/login');
+      }
     } catch (error) {
       toast.error('Registration failed. Please try again.');
     } finally {
