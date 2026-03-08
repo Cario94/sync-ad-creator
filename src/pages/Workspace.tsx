@@ -206,7 +206,7 @@ function WorkspaceInner() {
               variant={saveStatus === 'unsaved' ? 'default' : 'outline'}
               size="sm"
               onClick={handleSave}
-              disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved'}
+              disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved' || saveStatus === 'conflict'}
             >
               {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save
