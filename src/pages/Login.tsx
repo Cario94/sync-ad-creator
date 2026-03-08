@@ -42,7 +42,7 @@ const Login = () => {
       }
       
       toast.success('Successfully logged in');
-      navigate('/workspace');
+      navigate('/dashboard');
     } catch (error) {
       toast.error('Login failed. Please check your credentials.');
     } finally {

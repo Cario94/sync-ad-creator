@@ -68,7 +68,7 @@ const ResetPassword = () => {
       }
 
       toast.success('Password updated successfully!');
-      navigate('/workspace');
+      navigate('/dashboard');
     } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {

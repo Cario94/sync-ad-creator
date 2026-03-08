@@ -217,7 +217,7 @@ const Workspace = () => {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center gap-4 bg-background">
         <p className="text-destructive">{error}</p>
-        <Button onClick={() => navigate('/')}>Go Home</Button>
+        <Button onClick={() => navigate('/dashboard')}>Back to Projects</Button>
       </div>
     );
   }
@@ -227,7 +227,7 @@ const Workspace = () => {
       {/* Sidebar */}
       <div className={`h-full bg-white border-r border-border flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 -ml-64'}`}>
         <div className="flex items-center justify-between p-6">
-          <Link to="/" className="text-xl font-bold text-gradient">CampaignSync</Link>
+          <Link to="/dashboard" className="text-xl font-bold text-gradient">CampaignSync</Link>
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />
           </Button>

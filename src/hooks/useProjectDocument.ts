@@ -56,19 +56,11 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
         setIsLoading(true);
         setError(null);
 
-        let pid = paramProjectId ?? null;
+        const pid = paramProjectId ?? null;
 
         if (!pid) {
-          const projects = await projectsService.list(user.id);
-          if (projects.length > 0) {
-            pid = projects[0].id;
-          } else {
-            const newProject = await projectsService.create({
-              user_id: user.id,
-              name: 'My First Project',
-            });
-            pid = newProject.id;
-          }
+          if (!cancelled) setError('No project selected');
+          return;
         }
 
         if (cancelled) return;

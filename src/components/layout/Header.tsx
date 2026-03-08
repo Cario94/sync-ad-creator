@@ -11,7 +11,7 @@ const Header = () => {
   const { session } = useAuth();
 
   // Hide header on workspace pages
-  const isWorkspace = location.pathname.startsWith('/workspace');
+  const isAppPage = location.pathname.startsWith('/workspace') || location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,7 +26,7 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   }, [location]);
 
-  if (isWorkspace) return null;
+  if (isAppPage) return null;
 
   /** Scroll-to-section helper for hash links on the landing page */
   const scrollToSection = (hash: string) => {
@@ -70,8 +70,8 @@ const Header = () => {
           </Link>
           <div className="flex items-center space-x-4">
             {session ? (
-              <Link to="/workspace">
-                <Button className="font-medium px-6">Go to Workspace</Button>
+              <Link to="/dashboard">
+                <Button className="font-medium px-6">Go to Dashboard</Button>
               </Link>
             ) : (
               <>
@@ -117,8 +117,8 @@ const Header = () => {
             </Link>
             <div className="flex flex-col space-y-3 pt-2">
               {session ? (
-                <Link to="/workspace" className="w-full">
-                  <Button className="font-medium w-full">Go to Workspace</Button>
+                <Link to="/dashboard" className="w-full">
+                  <Button className="font-medium w-full">Go to Dashboard</Button>
                 </Link>
               ) : (
                 <>
