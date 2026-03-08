@@ -295,6 +295,9 @@ const Workspace = () => {
               const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true, shiftKey: true });
               window.dispatchEvent(event);
             }}
+            onAddCampaign={handleAddCampaign}
+            onAddAdSet={handleAddAdSet}
+            onAddAd={handleAddAd}
           />
         </div>
         
