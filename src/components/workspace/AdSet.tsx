@@ -5,6 +5,8 @@ import AdSetDialog from './dialogs/AdSetDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateAdSetConfig } from './types/canvas';
+import NodeValidationBadge from './NodeValidationBadge';
+import { useNodeValidation } from '@/hooks/useNodeValidation';
 
 interface AdSetProps {
   name: string;
@@ -45,6 +47,9 @@ const AdSet: React.FC<AdSetProps> = ({
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateAdSetConfig(config);
+  const validation = useNodeValidation(id);
+  const errCount = validation?.issues.filter(i => i.severity === 'error').length ?? 0;
+  const warnCount = validation?.issues.filter(i => i.severity === 'warning').length ?? 0;
 
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
@@ -100,7 +105,7 @@ const AdSet: React.FC<AdSetProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-4 w-66 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab",
+            "absolute p-4 w-66 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab relative",
             isDragging ? "cursor-grabbing shadow-lg opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-lg z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
@@ -121,6 +126,7 @@ const AdSet: React.FC<AdSetProps> = ({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
+          <NodeValidationBadge errors={errCount} warnings={warnCount} />
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-9 h-9 rounded-full bg-accent-foreground/15 flex items-center justify-center ring-2 ring-accent-foreground/20">
               <Users className="h-4 w-4 text-accent-foreground" />

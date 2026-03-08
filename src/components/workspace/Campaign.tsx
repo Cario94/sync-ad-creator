@@ -5,6 +5,8 @@ import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateCampaignConfig } from './types/canvas';
+import NodeValidationBadge from './NodeValidationBadge';
+import { useNodeValidation } from '@/hooks/useNodeValidation';
 
 interface CampaignProps {
   name: string;
@@ -43,6 +45,9 @@ const Campaign: React.FC<CampaignProps> = ({
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateCampaignConfig(config);
+  const validation = useNodeValidation(id);
+  const errCount = validation?.issues.filter(i => i.severity === 'error').length ?? 0;
+  const warnCount = validation?.issues.filter(i => i.severity === 'warning').length ?? 0;
 
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
@@ -98,7 +103,7 @@ const Campaign: React.FC<CampaignProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 cursor-grab",
+            "absolute p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 cursor-grab relative",
             isDragging ? "cursor-grabbing shadow-xl opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-xl z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
@@ -118,6 +123,7 @@ const Campaign: React.FC<CampaignProps> = ({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
         >
+          <NodeValidationBadge errors={errCount} warnings={warnCount} />
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary/30">
               <Megaphone className="h-5 w-5 text-primary" />

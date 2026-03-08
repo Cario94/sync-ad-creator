@@ -8,6 +8,7 @@ import { useConnections, Connection } from '@/hooks/useConnections';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 import MultiSelectSettings from './MultiSelectSettings';
+import ValidationPanel from './ValidationPanel';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface CanvasProps {
@@ -323,6 +324,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <ZoomControls scale={scale} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
+      <ValidationPanel />
 
       {showMultiSettings && selectedElementIds.length > 1 && (
         <MultiSelectSettings
