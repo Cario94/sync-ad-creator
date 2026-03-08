@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Facebook } from 'lucide-react';
+import { Facebook, Mail } from 'lucide-react';
 import AnimatedGradient from '@/components/ui/AnimatedGradient';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
