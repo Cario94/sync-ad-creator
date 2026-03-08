@@ -104,8 +104,9 @@ const Dashboard = () => {
     }
   };
 
-  // Open
+  // Open — update last_opened_at optimistically
   const handleOpen = (project: Project) => {
+    setProjects(prev => prev.map(p => p.id === project.id ? { ...p, last_opened_at: new Date().toISOString() } : p));
     navigate(`/workspace/${project.id}`);
   };
 
