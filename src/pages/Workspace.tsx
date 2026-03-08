@@ -1,10 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Canvas, { CanvasRef } from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
-import { 
-  Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle
+import {
+  Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle,
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -13,11 +13,9 @@ import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
-import type { CanvasElement } from '@/components/workspace/types/canvas';
-import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
-import type { Connection } from '@/hooks/useConnections';
-import { toast as sonnerToast } from 'sonner';
+import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
+import type { SaveStatus } from '@/hooks/useProjectDocument';
+import { useState } from 'react';
 
 /** Small pill showing current save status */
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
@@ -55,9 +53,12 @@ function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   }
 }
 
-const Workspace = () => {
-  const { projectId: paramProjectId } = useParams<{ projectId: string }>();
-  const { projectId, documentState, isLoading, error, save, saveStatus, markDirty } = useProjectDocument(paramProjectId);
+/** Inner workspace that consumes WorkspaceContext */
+function WorkspaceInner() {
+  const {
+    isLoading, error, saveStatus, save,
+    addCampaign, addAdSet, addAd,
+  } = useWorkspace();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
@@ -68,49 +69,15 @@ const Workspace = () => {
   const canvasRef = useRef<CanvasRef>(null);
   const { user, signOut } = useAuth();
 
-  // Track latest canvas state for save
-  const elementsRef = useRef<CanvasElement[]>([]);
-  const connectionsRef = useRef<Connection[]>([]);
-  // Count how many hydration callbacks we expect (elements + connections = 2)
-  const hydrationCountRef = useRef(0);
-  const hydrationDoneRef = useRef(false);
-
-  const handleElementsChange = useCallback((elements: CanvasElement[]) => {
-    elementsRef.current = elements;
-    if (!hydrationDoneRef.current) {
-      hydrationCountRef.current += 1;
-      // After both elements and connections have fired once, hydration is done
-      if (hydrationCountRef.current >= 2) hydrationDoneRef.current = true;
-      return;
-    }
-    markDirty();
-  }, [markDirty]);
-
-  const handleConnectionsChange = useCallback((connections: Connection[]) => {
-    connectionsRef.current = connections;
-    if (!hydrationDoneRef.current) {
-      hydrationCountRef.current += 1;
-      if (hydrationCountRef.current >= 2) hydrationDoneRef.current = true;
-      return;
-    }
-    markDirty();
-  }, [markDirty]);
-
   const handleSave = async () => {
-    const viewport = canvasRef.current?.getViewport() ?? { x: 0, y: 0, zoom: 1 };
-    const state: ProjectDocumentState = {
-      elements: elementsRef.current,
-      connections: connectionsRef.current,
-      viewport,
-    };
     try {
-      await save(state);
+      await save();
     } catch {
       toast({ title: 'Save failed', description: 'Could not save workspace. Please try again.', variant: 'destructive' });
     }
   };
 
-  // Ctrl/Cmd+S shortcut — use a ref to avoid stale closure
+  // Ctrl/Cmd+S shortcut
   const handleSaveRef = useRef(handleSave);
   handleSaveRef.current = handleSave;
 
@@ -124,7 +91,7 @@ const Workspace = () => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-  
+
   const handleLogout = async () => {
     await signOut();
     toast({ title: 'Logged out', description: 'You have been successfully logged out.' });
@@ -136,74 +103,6 @@ const Workspace = () => {
   };
 
   const handleTidyLayout = () => canvasRef.current?.tidyLayout();
-
-  // ── Element creation helpers ──
-  const generateId = (type: string) =>
-    `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-  /** Find a non-overlapping position for a new node */
-  const findOpenPosition = (type: CanvasElement['type']): { x: number; y: number } => {
-    const existing = elementsRef.current;
-    const col = type === 'campaign' ? 0 : type === 'adset' ? 1 : 2;
-    const baseX = 100 + col * 350;
-    const baseY = 100;
-    const step = 170;
-    // Stack vertically within the column
-    const sameCol = existing.filter(el => el.type === type);
-    return { x: baseX, y: baseY + sameCol.length * step };
-  };
-
-  const handleAddCampaign = () => {
-    const element: CanvasElement = {
-      id: generateId('campaign'),
-      type: 'campaign',
-      name: `Campaign ${elementsRef.current.filter(e => e.type === 'campaign').length + 1}`,
-      position: findOpenPosition('campaign'),
-      config: defaultCampaignConfig() as unknown as Record<string, unknown>,
-    };
-    canvasRef.current?.addElement(element);
-    sonnerToast.success('Campaign created');
-  };
-
-  const handleAddAdSet = () => {
-    // Hierarchy: at least one campaign must exist
-    const campaigns = elementsRef.current.filter(e => e.type === 'campaign');
-    if (campaigns.length === 0) {
-      sonnerToast.error('Create a Campaign first', {
-        description: 'Ad Sets must belong to a Campaign.',
-      });
-      return;
-    }
-    const element: CanvasElement = {
-      id: generateId('adset'),
-      type: 'adset',
-      name: `Ad Set ${elementsRef.current.filter(e => e.type === 'adset').length + 1}`,
-      position: findOpenPosition('adset'),
-      config: defaultAdSetConfig() as unknown as Record<string, unknown>,
-    };
-    canvasRef.current?.addElement(element);
-    sonnerToast.success('Ad Set created');
-  };
-
-  const handleAddAd = () => {
-    // Hierarchy: at least one ad set must exist
-    const adSets = elementsRef.current.filter(e => e.type === 'adset');
-    if (adSets.length === 0) {
-      sonnerToast.error('Create an Ad Set first', {
-        description: 'Ads must belong to an Ad Set.',
-      });
-      return;
-    }
-    const element: CanvasElement = {
-      id: generateId('ad'),
-      type: 'ad',
-      name: `Ad ${elementsRef.current.filter(e => e.type === 'ad').length + 1}`,
-      position: findOpenPosition('ad'),
-      config: defaultAdConfig() as unknown as Record<string, unknown>,
-    };
-    canvasRef.current?.addElement(element);
-    sonnerToast.success('Ad created');
-  };
 
   if (isLoading) {
     return (
@@ -225,14 +124,14 @@ const Workspace = () => {
   return (
     <div className="h-screen w-screen flex overflow-hidden">
       {/* Sidebar */}
-      <div className={`h-full bg-white border-r border-border flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 -ml-64'}`}>
+      <div className={`h-full bg-card border-r border-border flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 -ml-64'}`}>
         <div className="flex items-center justify-between p-6">
           <Link to="/dashboard" className="text-xl font-bold text-gradient">CampaignSync</Link>
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />
           </Button>
         </div>
-        
+
         <nav className="flex-1 px-4 py-2">
           <div className="space-y-1">
             <Button variant="secondary" className="w-full justify-start font-medium">
@@ -246,7 +145,7 @@ const Workspace = () => {
             </Button>
           </div>
         </nav>
-        
+
         <div className="p-4 border-t border-border">
           <div className="flex items-center space-x-3 mb-4 cursor-pointer" onClick={() => setProfileOpen(true)}>
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
@@ -262,7 +161,7 @@ const Workspace = () => {
           </Button>
         </div>
       </div>
-      
+
       {/* Main content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
@@ -287,10 +186,10 @@ const Workspace = () => {
             <Button size="sm">Publish</Button>
           </div>
         </header>
-        
+
         {/* Toolbar */}
         <div className="p-4 flex justify-center">
-          <ToolBar 
+          <ToolBar
             onUndo={() => {
               const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true });
               window.dispatchEvent(event);
@@ -299,27 +198,16 @@ const Workspace = () => {
               const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true, shiftKey: true });
               window.dispatchEvent(event);
             }}
-            onAddCampaign={handleAddCampaign}
-            onAddAdSet={handleAddAdSet}
-            onAddAd={handleAddAd}
+            onAddCampaign={addCampaign}
+            onAddAdSet={addAdSet}
+            onAddAd={addAd}
           />
         </div>
-        
+
         {/* Canvas */}
         <div className="flex-1 overflow-hidden relative">
-          <Canvas
-            ref={canvasRef}
-            initialElements={documentState?.elements}
-            initialConnections={documentState?.connections as Connection[]}
-            initialViewport={documentState?.viewport}
-            onElementsChange={handleElementsChange}
-            onConnectionsChange={handleConnectionsChange}
-            onAddCampaign={handleAddCampaign}
-            onAddAdSet={handleAddAdSet}
-            onAddAd={handleAddAd}
-            onSave={handleSave}
-          />
-          
+          <Canvas ref={canvasRef} onSave={handleSave} />
+
           <div className="absolute bottom-20 right-4 z-10">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -338,6 +226,17 @@ const Workspace = () => {
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
+  );
+}
+
+/** Workspace page: wraps everything in WorkspaceProvider */
+const Workspace = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+
+  return (
+    <WorkspaceProvider paramProjectId={projectId}>
+      <WorkspaceInner />
+    </WorkspaceProvider>
   );
 };
 

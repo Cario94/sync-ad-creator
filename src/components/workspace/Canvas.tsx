@@ -5,32 +5,22 @@ import CanvasElements from './CanvasElements';
 import { CanvasElement } from './types/canvas';
 import { useCanvasInteraction, CanvasSnapshot } from '@/hooks/useCanvasInteraction';
 import { useConnections, Connection } from '@/hooks/useConnections';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { toast } from 'sonner';
 import MultiSelectSettings from './MultiSelectSettings';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface CanvasProps {
   className?: string;
-  initialElements?: CanvasElement[];
-  initialConnections?: Connection[];
-  initialViewport?: { x: number; y: number; zoom: number };
-  onElementsChange?: (elements: CanvasElement[]) => void;
-  onConnectionsChange?: (connections: Connection[]) => void;
-  onAddCampaign?: () => void;
-  onAddAdSet?: () => void;
-  onAddAd?: () => void;
   onSave?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onTidyLayout?: () => void;
 }
 
-interface CanvasRef {
+export interface CanvasRef {
   tidyLayout: () => void;
-  getElements: () => CanvasElement[];
-  getConnections: () => Connection[];
   getViewport: () => { x: number; y: number; zoom: number };
-  addElement: (element: CanvasElement) => void;
 }
 
 const generateId = (type: string) =>
@@ -38,21 +28,18 @@ const generateId = (type: string) =>
 
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   className = '',
-  initialElements,
-  initialConnections,
-  initialViewport,
-  onElementsChange,
-  onConnectionsChange,
-  onAddCampaign,
-  onAddAdSet,
-  onAddAd,
   onSave,
   onUndo,
   onRedo,
-  onTidyLayout
+  onTidyLayout,
 }, ref) => {
-  const [elements, setElements] = useState<CanvasElement[]>([]);
-  
+  // ── Workspace context (source of truth) ──
+  const {
+    elements, connections, setElements, setConnections,
+    selectedElementIds, setSelectedElementIds,
+    markDirty, addCampaign, addAdSet, addAd, viewportRef,
+  } = useWorkspace();
+
   const {
     canvasRef, scale, isDragging, pan, spacePressed,
     selectionRect, isSelecting,
@@ -60,15 +47,20 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     handleMouseDown, handleMouseMove, handleMouseUp,
     setScale, setPan,
     handleCopy, handlePaste, handleDuplicate,
-    handleUndo, handleRedo, addToHistory
+    handleUndo, handleRedo, addToHistory,
   } = useCanvasInteraction();
-  
+
+  // Connection UI state (transient — not persisted, just for drawing connections)
   const {
-    connections, isCreatingConnection, activeConnection,
+    isCreatingConnection, activeConnection,
     startConnection, completeConnection, cancelConnection,
-    removeConnection, setConnections
+    removeConnection, setConnections: setLocalConns,
   } = useConnections();
 
+  // Keep connection hook in sync with context
+  useEffect(() => { setLocalConns(connections); }, [connections, setLocalConns]);
+
+  // Refs for stable access in callbacks
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
   const elementsRef = useRef(elements);
@@ -80,27 +72,18 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const [pendingAffected, setPendingAffected] = useState<CanvasElement[]>([]);
   const [pendingDirectTargets, setPendingDirectTargets] = useState<CanvasElement[]>([]);
 
-  // Hydrate from DB
+  // Hydrate viewport from context
   useEffect(() => {
-    if (initialElements) setElements(initialElements);
-  }, [initialElements]);
+    const vp = viewportRef.current;
+    setPan({ x: vp.x, y: vp.y });
+    setScale(vp.zoom);
+  }, []); // only once on mount
 
+  // Sync viewport ref when pan/scale changes
   useEffect(() => {
-    if (initialConnections) setConnections(initialConnections);
-  }, [initialConnections]);
+    viewportRef.current = { x: pan.x, y: pan.y, zoom: scale };
+  }, [pan, scale, viewportRef]);
 
-  useEffect(() => {
-    if (initialViewport) {
-      setPan({ x: initialViewport.x, y: initialViewport.y });
-      setScale(initialViewport.zoom);
-    }
-  }, [initialViewport]);
-
-  // Notify parent of changes
-  useEffect(() => { onElementsChange?.(elements); }, [elements]);
-  useEffect(() => { onConnectionsChange?.(connections); }, [connections]);
-  
-  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const selectedElements = elements.filter(el => selectedElementIds.includes(el.id));
   const [showMultiSettings, setShowMultiSettings] = useState(false);
 
@@ -112,19 +95,19 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const applySnapshot = useCallback((snapshot: CanvasSnapshot) => {
     setElements(snapshot.elements);
     setConnections(snapshot.connections);
-  }, [setConnections]);
-  
+  }, [setElements, setConnections]);
+
   const updateElementPosition = (id: string, position: { x: number; y: number }) => {
     setElements(prev => prev.map(el => el.id === id ? { ...el, position } : el));
   };
-  
+
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       setSelectedElementIds([]);
       setShowMultiSettings(false);
     }
   };
-  
+
   // Rectangle selection
   useEffect(() => {
     if (!isSelecting && selectionRect && selectionRect.width > 5 && selectionRect.height > 5) {
@@ -139,7 +122,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           y > selectionRect.startY + selectionRect.height
         );
       }).map(el => el.id);
-      
+
       if (selectedIds.length > 0) {
         setSelectedElementIds(selectedIds);
         if (selectedIds.length > 1) setShowMultiSettings(true);
@@ -149,8 +132,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         setShowMultiSettings(false);
       }
     }
-  }, [isSelecting, selectionRect, elements]);
-  
+  }, [isSelecting, selectionRect, elements, setSelectedElementIds]);
+
   const handleSelectElement = (id: string) => {
     if (selectedElementIds.includes(id)) {
       setSelectedElementIds(prev => prev.filter(eid => eid !== id));
@@ -159,13 +142,14 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     }
     setShowMultiSettings(false);
   };
-  
+
   const updateMultipleElements = (updates: Partial<CanvasElement>) => {
     setElements(prev => {
       const updated = prev.map(el => selectedElementIds.includes(el.id) ? { ...el, ...updates } : el);
       pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
+    markDirty();
     toast.success(`Updated ${selectedElementIds.length} elements`);
   };
 
@@ -175,6 +159,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
+    markDirty();
   };
 
   const handleEditElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
@@ -183,7 +168,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
-  }, [pushSnapshot]);
+    markDirty();
+  }, [pushSnapshot, setElements, markDirty]);
 
   // ── Cascade ID collection ──
   const collectCascadeIds = useCallback((ids: string[], currentElements: CanvasElement[]): Set<string> => {
@@ -226,11 +212,12 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     setElements(newEls);
     setConnections(newConns);
     pushSnapshot(newEls, newConns);
+    markDirty();
 
     setSelectedElementIds(prev => prev.filter(eid => !idsToRemove.has(eid)));
     setShowMultiSettings(false);
     toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
-  }, [collectCascadeIds, setConnections, pushSnapshot]);
+  }, [collectCascadeIds, setConnections, setElements, pushSnapshot, markDirty, setSelectedElementIds]);
 
   /** Request delete with confirmation */
   const requestDelete = useCallback((ids: string[]) => {
@@ -239,7 +226,6 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     const affected = currentEls.filter(el => cascadeSet.has(el.id));
     const direct = currentEls.filter(el => ids.includes(el.id));
 
-    // Skip confirmation for simple single-element deletes without children
     if (affected.length === direct.length && affected.length === 1) {
       executeDelete(ids);
       return;
@@ -280,16 +266,17 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 
       const updated = [...prev, newElement];
       pushSnapshot(updated, connectionsRef.current);
+      markDirty();
       toast.success(`Duplicated ${source.type}`);
       return updated;
     });
-  }, [pushSnapshot]);
+  }, [pushSnapshot, markDirty, setElements]);
 
-  const getCampaigns = useCallback(() => 
+  const getCampaigns = useCallback(() =>
     elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
   [elements]);
 
-  const getAdSets = useCallback(() => 
+  const getAdSets = useCallback(() =>
     elements.filter(el => el.type === 'adset').map(el => ({ id: el.id, name: el.name })),
   [elements]);
 
@@ -297,10 +284,10 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     const campaigns = elements.filter(el => el.type === 'campaign');
     const adsets = elements.filter(el => el.type === 'adset');
     const ads = elements.filter(el => el.type === 'ad');
-    
+
     const startX = 100, startY = 100, horizontalSpacing = 350, verticalSpacing = 150;
     const newElements = [...elements];
-    
+
     campaigns.forEach((campaign, index) => {
       const element = newElements.find(el => el.id === campaign.id);
       if (element) element.position = { x: startX, y: startY + index * verticalSpacing };
@@ -313,31 +300,19 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       const element = newElements.find(el => el.id === ad.id);
       if (element) element.position = { x: startX + horizontalSpacing * 2, y: startY + index * verticalSpacing };
     });
-    
+
     setElements(newElements);
     pushSnapshot(newElements, connectionsRef.current);
+    markDirty();
     onTidyLayout?.();
     toast.success('Layout organized successfully');
   };
 
-  const addElement = useCallback((element: CanvasElement) => {
-    const el: CanvasElement = { ...element, config: element.config ?? {} };
-    setElements(prev => {
-      const updated = [...prev, el];
-      pushSnapshot(updated, connectionsRef.current);
-      return updated;
-    });
-    setSelectedElementIds([el.id]);
-  }, [pushSnapshot]);
-
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
-    getElements: () => elements,
-    getConnections: () => connections,
-    getViewport: () => ({ x: pan.x, y: pan.y, zoom: scale }),
-    addElement,
-  }), [elements, connections, pan, scale, tidyLayout, addElement]);
-  
+    getViewport: () => viewportRef.current,
+  }), [tidyLayout, viewportRef]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -349,19 +324,21 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           e.preventDefault();
           const newElements = handlePaste();
           if (newElements) {
-            const updatedEls = [...elements, ...newElements];
+            const updatedEls = [...elementsRef.current, ...newElements];
             setElements(updatedEls);
             setSelectedElementIds(newElements.map(el => el.id));
             pushSnapshot(updatedEls, connectionsRef.current);
+            markDirty();
           }
         } else if (e.key === 'd') {
           e.preventDefault();
           const duplicatedElements = handleDuplicate(selectedElements);
           if (duplicatedElements) {
-            const updatedEls = [...elements, ...duplicatedElements];
+            const updatedEls = [...elementsRef.current, ...duplicatedElements];
             setElements(updatedEls);
             setSelectedElementIds(duplicatedElements.map(el => el.id));
             pushSnapshot(updatedEls, connectionsRef.current);
+            markDirty();
           }
         } else if (e.key === 'z') {
           e.preventDefault();
@@ -374,7 +351,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           }
         }
       }
-      
+
       // Undo/redo should also work with no selection
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && selectedElementIds.length === 0) {
         e.preventDefault();
@@ -386,23 +363,23 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           if (snapshot) { applySnapshot(snapshot); onUndo?.(); }
         }
       }
-      
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.length > 0) {
         e.preventDefault();
         handleDeleteMultiple(selectedElementIds);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, pushSnapshot, onUndo, onRedo, handleDeleteMultiple, applySnapshot]);
-  
+  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, pushSnapshot, onUndo, onRedo, handleDeleteMultiple, applySnapshot, markDirty, setElements, setSelectedElementIds]);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <ZoomControls scale={scale} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
-      
+
       {showMultiSettings && selectedElementIds.length > 1 && (
-        <MultiSelectSettings 
+        <MultiSelectSettings
           count={selectedElementIds.length}
           onClose={() => setShowMultiSettings(false)}
           onUpdate={updateMultipleElements}
@@ -412,7 +389,6 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         />
       )}
 
-      {/* Delete confirmation dialog — rendered outside canvas transform */}
       <DeleteConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
@@ -420,9 +396,9 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         affectedElements={pendingAffected}
         directTargets={pendingDirectTargets}
       />
-      
-      <CanvasContextMenu elementType="" onAddCampaign={onAddCampaign} onAddAdSet={onAddAdSet} onAddAd={onAddAd} onSave={onSave}>
-        <div 
+
+      <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
+        <div
           ref={canvasRef}
           className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative`}
           onMouseDown={handleMouseDown}
@@ -434,10 +410,10 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: '0 0',
             transition: isDragging || isSelecting ? 'none' : 'transform 0.05s ease-out',
-            willChange: 'transform'
+            willChange: 'transform',
           }}
         >
-          <svg 
+          <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ zIndex: 0, minWidth: '200%', minHeight: '200%', left: '-50%', top: '-50%' }}
           >
@@ -448,20 +424,20 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
           </svg>
-          
+
           {isSelecting && selectionRect && (
-            <div 
+            <div
               className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-50"
               style={{
                 left: `${selectionRect.startX}px`,
                 top: `${selectionRect.startY}px`,
                 width: `${selectionRect.width}px`,
-                height: `${selectionRect.height}px`
+                height: `${selectionRect.height}px`,
               }}
             />
           )}
-          
-          <CanvasElements 
+
+          <CanvasElements
             elements={elements}
             connections={connections}
             isCreatingConnection={isCreatingConnection}
@@ -488,4 +464,3 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 Canvas.displayName = 'Canvas';
 
 export default Canvas;
-export type { CanvasRef };
