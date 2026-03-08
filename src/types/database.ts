@@ -14,7 +14,7 @@ export type ProjectInsert = TablesInsert<'projects'>;
 export type MediaAssetInsert = TablesInsert<'media_assets'>;
 export type ActivityLogInsert = TablesInsert<'activity_logs'>;
 
-// ── Canvas JSONB shape ──
+// ── Canvas JSONB shape (mirrors CanvasElement from workspace types) ──
 export interface CanvasNode {
   id: string;
   type: 'campaign' | 'adset' | 'ad';

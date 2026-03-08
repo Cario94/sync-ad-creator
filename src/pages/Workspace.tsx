@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
+import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
 import { toast as sonnerToast } from 'sonner';
 
@@ -158,7 +159,7 @@ const Workspace = () => {
       type: 'campaign',
       name: `Campaign ${elementsRef.current.filter(e => e.type === 'campaign').length + 1}`,
       position: findOpenPosition('campaign'),
-      config: {},
+      config: defaultCampaignConfig() as unknown as Record<string, unknown>,
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Campaign created');
@@ -178,7 +179,7 @@ const Workspace = () => {
       type: 'adset',
       name: `Ad Set ${elementsRef.current.filter(e => e.type === 'adset').length + 1}`,
       position: findOpenPosition('adset'),
-      config: {},
+      config: defaultAdSetConfig() as unknown as Record<string, unknown>,
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad Set created');
@@ -198,7 +199,7 @@ const Workspace = () => {
       type: 'ad',
       name: `Ad ${elementsRef.current.filter(e => e.type === 'ad').length + 1}`,
       position: findOpenPosition('ad'),
-      config: {},
+      config: defaultAdConfig() as unknown as Record<string, unknown>,
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad created');

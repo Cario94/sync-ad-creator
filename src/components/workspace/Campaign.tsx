@@ -4,8 +4,7 @@ import { Megaphone, Link } from 'lucide-react';
 import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
-import { CanvasElement } from './types/canvas';
-import { fromDateString } from '@/lib/dateUtils';
+import { CanvasElement, hydrateCampaignConfig } from './types/canvas';
 
 interface CampaignProps {
   name: string;
@@ -43,32 +42,14 @@ const Campaign: React.FC<CampaignProps> = ({
   onDuplicate,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const typed = hydrateCampaignConfig(config);
 
-  // Build dialog data from props
-  const campaignData = {
-    id,
-    name,
-    objective: (config.objective as string) || 'awareness',
-    budget: (config.budget as number) || 50,
-    specialAdCategory: (config.specialAdCategory as boolean) || false,
-    abTesting: (config.abTesting as boolean) || false,
-    buyingType: (config.buyingType as string) || 'auction',
-    budgetOptimization: config.budgetOptimization !== undefined ? (config.budgetOptimization as boolean) : true,
-    bidStrategy: (config.bidStrategy as string) || 'lowest_cost',
-    startDate: fromDateString(config.startDate) || new Date(),
-    endDate: fromDateString(config.endDate),
-    adStrategyType: (config.adStrategyType as string) || 'standard',
-    placementStrategy: config.placementStrategy !== undefined ? (config.placementStrategy as boolean) : true,
-  };
-
-  const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
+  const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
   });
 
-  useEffect(() => {
-    setIsSelected(isSelected);
-  }, [isSelected, setIsSelected]);
+  useEffect(() => { setIsSelected(isSelected); }, [isSelected, setIsSelected]);
 
   useEffect(() => {
     if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
@@ -82,13 +63,9 @@ const Campaign: React.FC<CampaignProps> = ({
     setDialogOpen(true);
   };
 
-  const handleSave = (updated: any) => {
-    const { id: _id, name: newName, ...rest } = updated;
+  const handleSave = (updated: Record<string, unknown> & { name: string }) => {
+    const { name: newName, ...rest } = updated;
     onEdit?.({ name: newName, config: rest });
-  };
-
-  const handleDelete = () => {
-    onDelete?.();
   };
 
   const isActiveConnection = activeConnectionId === id;
@@ -96,17 +73,17 @@ const Campaign: React.FC<CampaignProps> = ({
 
   const handleConnectionStart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onStartConnection) onStartConnection();
+    onStartConnection?.();
   };
 
   const handleConnectionComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
+    if (isConnectionTarget) onCompleteConnection?.();
   };
 
   const combinedRef = (el: HTMLDivElement | null) => {
     dragRef(el);
-    if (elementRef) elementRef(el);
+    elementRef?.(el);
   };
 
   return (
@@ -135,11 +112,8 @@ const Campaign: React.FC<CampaignProps> = ({
             minHeight: '140px'
           }}
           onMouseDown={(e) => {
-            if (isCreatingConnection) {
-              handleConnectionComplete(e);
-            } else {
-              handleMouseDown(e);
-            }
+            if (isCreatingConnection) handleConnectionComplete(e);
+            else handleMouseDown(e);
           }}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -152,7 +126,7 @@ const Campaign: React.FC<CampaignProps> = ({
           </div>
           <h3 className="font-bold text-lg mb-1">{name}</h3>
           <div className="mt-2 text-xs text-muted-foreground font-medium">
-            Objective: {campaignData.objective.charAt(0).toUpperCase() + campaignData.objective.slice(1)}
+            Objective: {typed.objective.charAt(0).toUpperCase() + typed.objective.slice(1)} • {typed.status}
           </div>
           
           <button
@@ -168,9 +142,11 @@ const Campaign: React.FC<CampaignProps> = ({
       <CampaignDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        campaign={campaignData}
+        campaignId={id}
+        campaignName={name}
+        config={typed}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={onDelete}
       />
     </>
   );

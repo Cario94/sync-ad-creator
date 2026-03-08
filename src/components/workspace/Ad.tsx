@@ -4,7 +4,7 @@ import { ImageIcon } from 'lucide-react';
 import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
-import { CanvasElement } from './types/canvas';
+import { CanvasElement, hydrateAdConfig } from './types/canvas';
 
 interface AdProps {
   name: string;
@@ -42,28 +42,14 @@ const Ad: React.FC<AdProps> = ({
   adSets = [],
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const typed = hydrateAdConfig(config);
 
-  const adData = {
-    id,
-    name,
-    adSetId: (config.adSetId as string) || '',
-    primaryText: (config.primaryText as string) || '',
-    headline: (config.headline as string) || name,
-    description: (config.description as string) || '',
-    callToAction: (config.callToAction as string) || 'learn_more',
-    destinationUrl: (config.destinationUrl as string) || 'https://',
-    displayUrl: (config.displayUrl as string) || '',
-    imageUrl: (config.imageUrl as string) || '',
-  };
-
-  const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
+  const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
   });
 
-  useEffect(() => {
-    setIsSelected(isSelected);
-  }, [isSelected, setIsSelected]);
+  useEffect(() => { setIsSelected(isSelected); }, [isSelected, setIsSelected]);
 
   useEffect(() => {
     if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
@@ -77,13 +63,9 @@ const Ad: React.FC<AdProps> = ({
     setDialogOpen(true);
   };
 
-  const handleSave = (updated: any) => {
-    const { id: _id, name: newName, ...rest } = updated;
+  const handleSave = (updated: Record<string, unknown> & { name: string }) => {
+    const { name: newName, ...rest } = updated;
     onEdit?.({ name: newName, config: rest });
-  };
-
-  const handleDelete = () => {
-    onDelete?.();
   };
 
   const isActiveConnection = activeConnectionId === id;
@@ -91,12 +73,12 @@ const Ad: React.FC<AdProps> = ({
 
   const handleConnectionComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
+    if (isConnectionTarget) onCompleteConnection?.();
   };
 
   const combinedRef = (el: HTMLDivElement | null) => {
     dragRef(el);
-    if (elementRef) elementRef(el);
+    elementRef?.(el);
   };
 
   return (
@@ -125,11 +107,8 @@ const Ad: React.FC<AdProps> = ({
             width: '240px'
           }}
           onMouseDown={(e) => {
-            if (isCreatingConnection) {
-              handleConnectionComplete(e);
-            } else {
-              handleMouseDown(e);
-            }
+            if (isCreatingConnection) handleConnectionComplete(e);
+            else handleMouseDown(e);
           }}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -142,18 +121,14 @@ const Ad: React.FC<AdProps> = ({
           </div>
           <h3 className="font-semibold text-sm mb-1">{name}</h3>
           
-          {adData.imageUrl && (
+          {typed.imageUrl && (
             <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">
-              <img 
-                src={adData.imageUrl} 
-                alt={name} 
-                className="w-full h-full object-cover"
-              />
+              <img src={typed.imageUrl} alt={name} className="w-full h-full object-cover" />
             </div>
           )}
           
           <div className="mt-2 text-xs text-muted-foreground">
-            Format: Image • Status: Active
+            {typed.headline ? typed.headline : 'No headline'} • {typed.callToAction.replace(/_/g, ' ')}
           </div>
         </div>
       </CanvasContextMenu>
@@ -161,9 +136,11 @@ const Ad: React.FC<AdProps> = ({
       <AdDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        ad={adData}
+        adId={id}
+        adName={name}
+        config={typed}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={onDelete}
         adSets={adSets}
       />
     </>
