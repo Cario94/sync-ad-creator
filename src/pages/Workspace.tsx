@@ -136,6 +136,71 @@ const Workspace = () => {
 
   const handleTidyLayout = () => canvasRef.current?.tidyLayout();
 
+  // ── Element creation helpers ──
+  const generateId = (type: string) =>
+    `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  /** Find a non-overlapping position for a new node */
+  const findOpenPosition = (type: CanvasElement['type']): { x: number; y: number } => {
+    const existing = elementsRef.current;
+    const col = type === 'campaign' ? 0 : type === 'adset' ? 1 : 2;
+    const baseX = 100 + col * 350;
+    const baseY = 100;
+    const step = 170;
+    // Stack vertically within the column
+    const sameCol = existing.filter(el => el.type === type);
+    return { x: baseX, y: baseY + sameCol.length * step };
+  };
+
+  const handleAddCampaign = () => {
+    const element: CanvasElement = {
+      id: generateId('campaign'),
+      type: 'campaign',
+      name: `Campaign ${elementsRef.current.filter(e => e.type === 'campaign').length + 1}`,
+      position: findOpenPosition('campaign'),
+    };
+    canvasRef.current?.addElement(element);
+    sonnerToast.success('Campaign created');
+  };
+
+  const handleAddAdSet = () => {
+    // Hierarchy: at least one campaign must exist
+    const campaigns = elementsRef.current.filter(e => e.type === 'campaign');
+    if (campaigns.length === 0) {
+      sonnerToast.error('Create a Campaign first', {
+        description: 'Ad Sets must belong to a Campaign.',
+      });
+      return;
+    }
+    const element: CanvasElement = {
+      id: generateId('adset'),
+      type: 'adset',
+      name: `Ad Set ${elementsRef.current.filter(e => e.type === 'adset').length + 1}`,
+      position: findOpenPosition('adset'),
+    };
+    canvasRef.current?.addElement(element);
+    sonnerToast.success('Ad Set created');
+  };
+
+  const handleAddAd = () => {
+    // Hierarchy: at least one ad set must exist
+    const adSets = elementsRef.current.filter(e => e.type === 'adset');
+    if (adSets.length === 0) {
+      sonnerToast.error('Create an Ad Set first', {
+        description: 'Ads must belong to an Ad Set.',
+      });
+      return;
+    }
+    const element: CanvasElement = {
+      id: generateId('ad'),
+      type: 'ad',
+      name: `Ad ${elementsRef.current.filter(e => e.type === 'ad').length + 1}`,
+      position: findOpenPosition('ad'),
+    };
+    canvasRef.current?.addElement(element);
+    sonnerToast.success('Ad created');
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
