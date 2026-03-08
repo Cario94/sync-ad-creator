@@ -149,24 +149,43 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
 
   // ── Wheel: Ctrl/Cmd = zoom toward cursor, otherwise = pan ──
 
+  // Accumulate deltas and flush once per frame to avoid jitter
+  const pendingDelta = useRef({ dx: 0, dy: 0 });
+  const rafId = useRef<number | null>(null);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    /** Normalize deltaY across deltaMode (pixel / line / page) */
+    const normalizeDelta = (delta: number, mode: number) => {
+      if (mode === 1) return delta * 20;  // line → px
+      if (mode === 2) return delta * 400; // page → px
+      return delta; // already px (mode 0, trackpad)
+    };
+
     const wheelHandler = (e: WheelEvent) => {
-      // Ctrl/Cmd+wheel = zoom toward cursor
+      e.preventDefault();
+
+      const dy = normalizeDelta(e.deltaY, e.deltaMode);
+      const dx = normalizeDelta(e.deltaX, e.deltaMode);
+
+      // ── Zoom: Ctrl/Cmd + wheel or pinch gesture ──
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
         const rect = container.getBoundingClientRect();
         const cursorX = e.clientX - rect.left;
         const cursorY = e.clientY - rect.top;
 
         const vp = viewportRef.current;
-        const delta = -e.deltaY * 0.005;
-        const newZoom = Math.min(Math.max(vp.zoom * (1 + delta), minScale), maxScale);
+
+        // Pinch gestures on trackpad send small fractional deltaY with ctrlKey.
+        // Mouse wheel sends larger integers. Use a tuned multiplier and clamp.
+        const raw = -dy * 0.008;
+        const clamped = Math.max(-0.15, Math.min(0.15, raw)); // cap per-event change
+        const newZoom = Math.min(Math.max(vp.zoom * (1 + clamped), minScale), maxScale);
         const ratio = newZoom / vp.zoom;
 
-        // Anchor zoom at cursor position
+        // Anchor zoom at cursor
         setViewport({
           x: cursorX - ratio * (cursorX - vp.x),
           y: cursorY - ratio * (cursorY - vp.y),
@@ -175,17 +194,32 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
         return;
       }
 
-      // Two-finger trackpad or scroll = pan
-      e.preventDefault();
-      setViewport(prev => ({
-        ...prev,
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY,
-      }));
+      // ── Pan: two-finger trackpad or mouse scroll ──
+      // Accumulate and flush on next animation frame for smoothness
+      pendingDelta.current.dx += dx;
+      pendingDelta.current.dy += dy;
+
+      if (rafId.current === null) {
+        rafId.current = requestAnimationFrame(() => {
+          const { dx: pdx, dy: pdy } = pendingDelta.current;
+          pendingDelta.current.dx = 0;
+          pendingDelta.current.dy = 0;
+          rafId.current = null;
+
+          setViewport(prev => ({
+            ...prev,
+            x: prev.x - pdx,
+            y: prev.y - pdy,
+          }));
+        });
+      }
     };
 
     container.addEventListener('wheel', wheelHandler, { passive: false });
-    return () => container.removeEventListener('wheel', wheelHandler);
+    return () => {
+      container.removeEventListener('wheel', wheelHandler);
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
+    };
   }, [minScale, maxScale]);
 
   // ── Space key for pan mode (only when canvas is focused context, not inside inputs) ──
