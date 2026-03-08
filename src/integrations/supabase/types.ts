@@ -57,6 +57,7 @@ export type Database = {
           file_type: string
           id: string
           name: string
+          project_id: string | null
           storage_path: string
           user_id: string
         }
@@ -67,6 +68,7 @@ export type Database = {
           file_type: string
           id?: string
           name: string
+          project_id?: string | null
           storage_path: string
           user_id: string
         }
@@ -77,10 +79,19 @@ export type Database = {
           file_type?: string
           id?: string
           name?: string
+          project_id?: string | null
           storage_path?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
