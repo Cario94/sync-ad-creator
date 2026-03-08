@@ -98,7 +98,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     id: `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     name: `${el.name} (copy)`,
     position: { x: el.position.x + offsetX, y: el.position.y + offsetY },
-    config: el.config ? { ...el.config } : {},
+    config: el.config ? JSON.parse(JSON.stringify(el.config)) : {},
   });
 
   const handleCopy = useCallback((selectedElements: CanvasElement[]) => {
