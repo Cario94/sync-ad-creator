@@ -310,6 +310,10 @@ const Workspace = () => {
             initialViewport={documentState?.viewport}
             onElementsChange={handleElementsChange}
             onConnectionsChange={handleConnectionsChange}
+            onAddCampaign={handleAddCampaign}
+            onAddAdSet={handleAddAdSet}
+            onAddAd={handleAddAd}
+            onSave={handleSave}
           />
           
           <div className="absolute bottom-20 right-4 z-10">
