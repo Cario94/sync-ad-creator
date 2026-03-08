@@ -11,7 +11,7 @@ const Header = () => {
   const { session } = useAuth();
 
   // Hide header on workspace pages
-  const isWorkspace = location.pathname.startsWith('/workspace');
+  const isAppPage = location.pathname.startsWith('/workspace') || location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
     const handleScroll = () => {
