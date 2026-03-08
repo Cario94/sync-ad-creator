@@ -156,6 +156,16 @@ const Index = () => {
     };
   }, []);
 
+  // Handle hash-based scrolling (e.g. /#features, /#pricing)
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
