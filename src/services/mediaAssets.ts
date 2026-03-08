@@ -1,10 +1,23 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { MediaAsset } from '@/types/database';
 
+/**
+ * Media bucket strategy: PUBLIC
+ *
+ * The "media" bucket is configured as public in Supabase Storage.
+ * All preview URLs use `getPublicUrl()` which returns a stable, non-expiring URL.
+ * Access control is handled at the metadata layer (media_assets table RLS)
+ * rather than at the storage URL level.
+ *
+ * If the bucket is ever changed to private, replace `getPublicUrl` with
+ * `createSignedUrl` and handle expiration/refresh in the UI.
+ */
 const BUCKET = 'media';
 
-/** Build the public URL for a file in the media bucket */
+/** Build the public URL for a file in the media bucket.
+ *  Returns empty string if storagePath is falsy (safe for img src fallback). */
 export function getPublicUrl(storagePath: string): string {
+  if (!storagePath) return '';
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
   return data.publicUrl;
 }

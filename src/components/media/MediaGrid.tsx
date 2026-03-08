@@ -117,6 +117,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
                 src={item.url} 
                 alt={item.name}
                 className="object-cover w-full h-full"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : item.type.startsWith('video/') ? (
               <div className="w-full h-full flex items-center justify-center relative">

@@ -66,6 +66,7 @@ const MediaPreviewDialog: React.FC<MediaPreviewDialogProps> = ({
                 src={item.url} 
                 alt={item.name}
                 className="max-w-full max-h-[60vh] object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
               />
             ) : item.type.startsWith('video/') ? (
               <video 
