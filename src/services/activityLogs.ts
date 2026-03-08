@@ -24,7 +24,7 @@ export const activityLogsService = {
       user_id: entry.user_id,
       action: entry.action,
       project_id: entry.project_id ?? null,
-      metadata: (entry.metadata as Record<string, unknown>) ?? null,
+      metadata: (entry.metadata ?? null) as Json,
     };
     const { error } = await supabase.from('activity_logs').insert([row]);
     if (error) console.warn('[activity_log]', error.message);
