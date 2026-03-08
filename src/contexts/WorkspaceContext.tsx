@@ -5,6 +5,7 @@ import type { CanvasElement } from '@/components/workspace/types/canvas';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
 import { projectsService } from '@/services/projects';
+import { activityLogsService } from '@/services/activityLogs';
 import { toast } from 'sonner';
 
 // ── History ──
