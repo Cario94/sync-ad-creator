@@ -26,8 +26,6 @@ const Workspace = () => {
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<CanvasRef>(null);

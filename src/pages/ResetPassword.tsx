@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,17 +11,32 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isValidLink, setIsValidLink] = useState(false);
+  const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for recovery token in URL hash
+    // Listen for PASSWORD_RECOVERY event from Supabase processing the hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoverySession(true);
+        setChecking(false);
+      }
+    });
+
+    // Also check URL hash as fallback (Supabase may have already processed it)
     const hash = window.location.hash;
     if (hash.includes('type=recovery')) {
-      setIsValidLink(true);
+      setIsRecoverySession(true);
     }
-    setChecking(false);
+
+    // Give Supabase a moment to process the hash token
+    const timeout = setTimeout(() => setChecking(false), 1500);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,12 +95,12 @@ const ResetPassword = () => {
           </Link>
           <h1 className="text-2xl font-bold mt-6 mb-2">Set new password</h1>
           <p className="text-muted-foreground">
-            {isValidLink ? 'Enter your new password below' : 'This reset link is invalid or expired'}
+            {isRecoverySession ? 'Enter your new password below' : 'This reset link is invalid or expired'}
           </p>
         </div>
 
         <div className="glass-morphism rounded-xl p-8">
-          {isValidLink ? (
+          {isRecoverySession ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
@@ -120,7 +135,7 @@ const ResetPassword = () => {
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                Please request a new password reset link.
+                This link may have expired. Please request a new one.
               </p>
               <Button asChild className="w-full h-11">
                 <Link to="/forgot-password">Request new link</Link>
