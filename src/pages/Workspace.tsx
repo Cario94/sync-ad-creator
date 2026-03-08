@@ -4,7 +4,7 @@ import Canvas, { CanvasRef } from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import { 
-  Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2
+  Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -13,13 +13,49 @@ import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProjectDocument, type ProjectDocumentState } from '@/hooks/useProjectDocument';
+import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
 
+/** Small pill showing current save status */
+function SaveStatusIndicator({ status }: { status: SaveStatus }) {
+  switch (status) {
+    case 'unsaved':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Circle className="h-2 w-2 fill-amber-400 text-amber-400" />
+          Unsaved changes
+        </span>
+      );
+    case 'saving':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Saving…
+        </span>
+      );
+    case 'saved':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-primary">
+          <Check className="h-3 w-3" />
+          Saved
+        </span>
+      );
+    case 'error':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3" />
+          Save failed
+        </span>
+      );
+    default:
+      return null;
+  }
+}
+
 const Workspace = () => {
   const { projectId: paramProjectId } = useParams<{ projectId: string }>();
-  const { projectId, documentState, isLoading, error, save, isSaving } = useProjectDocument(paramProjectId);
+  const { projectId, documentState, isLoading, error, save, saveStatus, markDirty } = useProjectDocument(paramProjectId);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
@@ -33,14 +69,28 @@ const Workspace = () => {
   // Track latest canvas state for save
   const elementsRef = useRef<CanvasElement[]>([]);
   const connectionsRef = useRef<Connection[]>([]);
+  const initialLoadRef = useRef(true);
 
   const handleElementsChange = useCallback((elements: CanvasElement[]) => {
     elementsRef.current = elements;
-  }, []);
+    // Skip the first hydration call
+    if (initialLoadRef.current) return;
+    markDirty();
+  }, [markDirty]);
 
   const handleConnectionsChange = useCallback((connections: Connection[]) => {
     connectionsRef.current = connections;
-  }, []);
+    if (initialLoadRef.current) return;
+    markDirty();
+  }, [markDirty]);
+
+  // After initial hydration settles, start tracking changes
+  // Use a small delay to skip the initial useEffect fires from Canvas
+  React.useEffect(() => {
+    if (!documentState) return;
+    const timer = setTimeout(() => { initialLoadRef.current = false; }, 500);
+    return () => clearTimeout(timer);
+  }, [documentState]);
 
   const handleSave = async () => {
     const viewport = canvasRef.current?.getViewport() ?? { x: 0, y: 0, zoom: 1 };
@@ -51,11 +101,22 @@ const Workspace = () => {
     };
     try {
       await save(state);
-      toast({ title: 'Saved', description: 'Workspace saved successfully.' });
     } catch {
-      toast({ title: 'Save failed', description: 'Could not save workspace.', variant: 'destructive' });
+      toast({ title: 'Save failed', description: 'Could not save workspace. Please try again.', variant: 'destructive' });
     }
   };
+
+  // Ctrl/Cmd+S shortcut
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  });
   
   const handleLogout = async () => {
     await signOut();
@@ -137,9 +198,15 @@ const Workspace = () => {
             </Button>
           )}
           <div className="text-lg font-semibold ml-auto mr-auto">Campaign Workspace</div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          <div className="flex items-center space-x-3">
+            <SaveStatusIndicator status={saveStatus} />
+            <Button
+              variant={saveStatus === 'unsaved' ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleSave}
+              disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved'}
+            >
+              {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save
             </Button>
             <Button size="sm">Publish</Button>

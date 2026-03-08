@@ -21,21 +21,18 @@ export interface ProjectDocumentState {
   viewport: { x: number; y: number; zoom: number };
 }
 
+export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error';
+
 interface UseProjectDocumentReturn {
-  /** Current project ID (may be auto-created) */
   projectId: string | null;
-  /** Loaded document state – null while loading */
   documentState: ProjectDocumentState | null;
-  /** DB version for optimistic concurrency */
   version: number;
-  /** True during initial load */
   isLoading: boolean;
-  /** Error message if load failed */
   error: string | null;
-  /** Persist current canvas state to DB */
   save: (state: ProjectDocumentState) => Promise<void>;
-  /** Whether a save is in progress */
-  isSaving: boolean;
+  saveStatus: SaveStatus;
+  /** Call when the user makes any change to mark the document dirty */
+  markDirty: () => void;
 }
 
 export function useProjectDocument(paramProjectId?: string): UseProjectDocumentReturn {
@@ -45,10 +42,11 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
   const [version, setVersion] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const versionRef = useRef(1);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Ensure a project exists, then load its document
+  // Load project + document
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -60,7 +58,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
 
         let pid = paramProjectId ?? null;
 
-        // If no project ID provided, get the most recent project or create one
         if (!pid) {
           const projects = await projectsService.list(user.id);
           if (projects.length > 0) {
@@ -77,7 +74,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
         if (cancelled) return;
         setProjectId(pid);
 
-        // Load the project document (trigger creates it on project insert)
         const doc = await projectDocumentsService.get(pid);
 
         if (cancelled) return;
@@ -92,13 +88,13 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
           setVersion(doc.version);
           versionRef.current = doc.version;
         } else {
-          // Fallback – should not happen if trigger works
           setDocumentState({
             elements: [],
             connections: [],
             viewport: { ...BLANK_CANVAS_STATE.viewport },
           });
         }
+        setSaveStatus('idle');
       } catch (err) {
         console.error('[useProjectDocument] load error', err);
         if (!cancelled) setError('Failed to load project');
@@ -111,10 +107,21 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
     return () => { cancelled = true; };
   }, [user, paramProjectId]);
 
+  const markDirty = useCallback(() => {
+    setSaveStatus(prev => {
+      // Don't override 'saving' status
+      if (prev === 'saving') return prev;
+      return 'unsaved';
+    });
+  }, []);
+
   const save = useCallback(async (state: ProjectDocumentState) => {
     if (!projectId) return;
     try {
-      setIsSaving(true);
+      // Clear any pending "saved" timer
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+
+      setSaveStatus('saving');
       const canvasState: CanvasState = {
         viewport: state.viewport,
         nodes: state.elements as unknown as CanvasState['nodes'],
@@ -123,13 +130,23 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
       const newVersion = await projectDocumentsService.save(projectId, canvasState, versionRef.current);
       versionRef.current = newVersion;
       setVersion(newVersion);
+      setSaveStatus('saved');
+
+      // Revert to idle after 3 seconds
+      savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
       console.error('[useProjectDocument] save error', err);
+      setSaveStatus('error');
       throw err;
-    } finally {
-      setIsSaving(false);
     }
   }, [projectId]);
 
-  return { projectId, documentState, version, isLoading, error, save, isSaving };
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
+
+  return { projectId, documentState, version, isLoading, error, save, saveStatus, markDirty };
 }
