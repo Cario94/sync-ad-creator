@@ -9,6 +9,8 @@ import PublicOnlyRoute from "@/components/auth/PublicOnlyRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +28,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
             <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            {/* Protected routes */}
             <Route path="/workspace" element={
               <ProtectedRoute>
                 <Workspace />
