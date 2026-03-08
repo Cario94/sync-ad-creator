@@ -143,7 +143,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     await rawSave(state);
     // Log canvas save (fire-and-forget)
     if (user && projectId) {
-      activityLogsService.canvasSaved(user.id, projectId, versionRef.current);
+      activityLogsService.canvasSaved(user.id, projectId, version);
     }
   }, [elements, connections, rawSave, user, projectId]);
 
