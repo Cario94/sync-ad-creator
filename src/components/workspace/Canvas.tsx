@@ -324,7 +324,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         />
       )}
       
-      <CanvasContextMenu elementType="">
+      <CanvasContextMenu elementType="" onAddCampaign={onAddCampaign} onAddAdSet={onAddAdSet} onAddAd={onAddAd} onSave={onSave}>
         <div 
           ref={canvasRef}
           className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative`}
