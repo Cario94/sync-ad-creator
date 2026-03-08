@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { projectDocumentsService } from '@/services/projectDocuments';
-import { projectsService } from '@/services/projects';
+import { projectDocumentsService, VersionConflictError } from '@/services/projectDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import type { CanvasState } from '@/types/database';
 import { BLANK_CANVAS_STATE } from '@/types/database';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
+import { toast } from 'sonner';
 
 /** Stored edge – extends the base schema edge with UI-only fields */
 export interface StoredEdge {
@@ -21,7 +21,7 @@ export interface ProjectDocumentState {
   viewport: { x: number; y: number; zoom: number };
 }
 
-export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error';
+export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error' | 'conflict';
 
 interface UseProjectDocumentReturn {
   projectId: string | null;
@@ -33,6 +33,8 @@ interface UseProjectDocumentReturn {
   saveStatus: SaveStatus;
   /** Call when the user makes any change to mark the document dirty */
   markDirty: () => void;
+  /** Re-fetch the document from the database (e.g. after a version conflict) */
+  reload: () => void;
 }
 
 export function useProjectDocument(paramProjectId?: string): UseProjectDocumentReturn {
@@ -45,6 +47,7 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const versionRef = useRef(1);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Load project + document
   useEffect(() => {
@@ -72,7 +75,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
 
         if (doc) {
           const cs = doc.canvas_state;
-          // Ensure every node has a config object for roundtrip safety
           const nodes = ((cs.nodes ?? []) as unknown as CanvasElement[]).map(n => ({
             ...n,
             config: n.config ?? {},
@@ -90,6 +92,8 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
             connections: [],
             viewport: { ...BLANK_CANVAS_STATE.viewport },
           });
+          setVersion(1);
+          versionRef.current = 1;
         }
         setSaveStatus('idle');
       } catch (err) {
@@ -102,11 +106,14 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
 
     init();
     return () => { cancelled = true; };
-  }, [user, paramProjectId]);
+  }, [user, paramProjectId, reloadKey]);
+
+  const reload = useCallback(() => {
+    setReloadKey(k => k + 1);
+  }, []);
 
   const markDirty = useCallback(() => {
     setSaveStatus(prev => {
-      // Don't override 'saving' status
       if (prev === 'saving') return prev;
       return 'unsaved';
     });
@@ -115,7 +122,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
   const save = useCallback(async (state: ProjectDocumentState) => {
     if (!projectId) return;
     try {
-      // Clear any pending "saved" timer
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
 
       setSaveStatus('saving');
@@ -129,14 +135,23 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
       setVersion(newVersion);
       setSaveStatus('saved');
 
-      // Revert to idle after 3 seconds
       savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
       console.error('[useProjectDocument] save error', err);
-      setSaveStatus('error');
+
+      if (err instanceof VersionConflictError) {
+        setSaveStatus('conflict');
+        toast.error('Save conflict', {
+          description: 'This project was modified elsewhere. Reload to get the latest version.',
+          action: { label: 'Reload', onClick: () => reload() },
+          duration: 10000,
+        });
+      } else {
+        setSaveStatus('error');
+      }
       throw err;
     }
-  }, [projectId]);
+  }, [projectId, reload]);
 
   // Cleanup timer
   useEffect(() => {
@@ -145,5 +160,5 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
     };
   }, []);
 
-  return { projectId, documentState, version, isLoading, error, save, saveStatus, markDirty };
+  return { projectId, documentState, version, isLoading, error, save, saveStatus, markDirty, reload };
 }
