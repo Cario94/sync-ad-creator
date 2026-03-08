@@ -117,6 +117,7 @@ const Ad: React.FC<AdProps> = ({
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
           )}
+          data-node-element="true"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
