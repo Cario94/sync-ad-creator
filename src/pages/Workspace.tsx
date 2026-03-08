@@ -54,6 +54,13 @@ function SaveStatusIndicator({ status }: { status: SaveStatus }) {
           Save failed
         </span>
       );
+    case 'conflict':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3" />
+          Version conflict
+        </span>
+      );
     default:
       return null;
   }
