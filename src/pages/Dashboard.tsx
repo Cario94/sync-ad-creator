@@ -104,8 +104,9 @@ const Dashboard = () => {
     }
   };
 
-  // Open
+  // Open — update last_opened_at optimistically
   const handleOpen = (project: Project) => {
+    setProjects(prev => prev.map(p => p.id === project.id ? { ...p, last_opened_at: new Date().toISOString() } : p));
     navigate(`/workspace/${project.id}`);
   };
 
@@ -312,9 +313,12 @@ const Dashboard = () => {
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${statusColor(project.status)}`}>
                         {project.status}
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title={`Updated ${format(new Date(project.updated_at), 'PPp')}`}>
                         <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+                        {project.last_opened_at
+                          ? `Opened ${formatDistanceToNow(new Date(project.last_opened_at), { addSuffix: true })}`
+                          : `Updated ${formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}`
+                        }
                       </span>
                     </div>
                   </Card>

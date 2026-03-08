@@ -4,6 +4,7 @@ import { useProjectDocument, type ProjectDocumentState, type SaveStatus, type St
 import type { CanvasElement } from '@/components/workspace/types/canvas';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
+import { projectsService } from '@/services/projects';
 import { toast } from 'sonner';
 
 // ── History ──
@@ -19,6 +20,7 @@ interface Snapshot {
 
 export interface WorkspaceState {
   projectId: string | null;
+  projectName: string;
   isLoading: boolean;
   error: string | null;
   saveStatus: SaveStatus;
@@ -85,7 +87,18 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
+  const [projectName, setProjectName] = useState('');
   const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
+
+  // Fetch project metadata + update last_opened_at
+  useEffect(() => {
+    if (!projectId) return;
+    projectsService.get(projectId).then(project => {
+      if (project) setProjectName(project.name);
+    }).catch(() => {});
+    // Fire-and-forget: update last_opened_at
+    projectsService.update(projectId, { last_opened_at: new Date().toISOString() }).catch(() => {});
+  }, [projectId]);
 
   // ── History (managed via refs to avoid re-renders on every push) ──
   const historyRef = useRef<Snapshot[]>([]);
@@ -290,7 +303,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   }, [findOpenPosition, smartMarkDirty, pushSnapshot]);
 
   const value: WorkspaceState = {
-    projectId, isLoading, error, saveStatus, save,
+    projectId, projectName, isLoading, error, saveStatus, save,
     elements, connections, setElements, setConnections,
     markDirty: smartMarkDirty,
     selectedElementIds, setSelectedElementIds,
