@@ -117,8 +117,8 @@ const Header = () => {
             </Link>
             <div className="flex flex-col space-y-3 pt-2">
               {session ? (
-                <Link to="/workspace" className="w-full">
-                  <Button className="font-medium w-full">Go to Workspace</Button>
+                <Link to="/dashboard" className="w-full">
+                  <Button className="font-medium w-full">Go to Dashboard</Button>
                 </Link>
               ) : (
                 <>

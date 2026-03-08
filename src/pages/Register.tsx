@@ -58,7 +58,7 @@ const Register = () => {
       
       if (data.session) {
         toast.success('Account created successfully!');
-        navigate('/workspace');
+        navigate('/dashboard');
       } else {
         setRegisteredEmail(email);
         setPendingVerification(true);
