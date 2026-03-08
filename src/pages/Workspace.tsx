@@ -178,6 +178,7 @@ const Workspace = () => {
       type: 'adset',
       name: `Ad Set ${elementsRef.current.filter(e => e.type === 'adset').length + 1}`,
       position: findOpenPosition('adset'),
+      config: {},
     };
     canvasRef.current?.addElement(element);
     sonnerToast.success('Ad Set created');
