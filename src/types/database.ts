@@ -43,6 +43,8 @@ export const BLANK_CANVAS_STATE: CanvasState = {
 // ── User preferences JSONB shape ──
 export interface UserPreferences {
   theme?: 'light' | 'dark';
+  timezone?: string;
+  defaultWorkspaceView?: 'canvas' | 'list' | 'grid';
   autoSave?: boolean;
   keyboardShortcuts?: boolean;
   notifications?: {
@@ -51,3 +53,12 @@ export interface UserPreferences {
     push?: boolean;
   };
 }
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: 'light',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  defaultWorkspaceView: 'canvas',
+  autoSave: true,
+  keyboardShortcuts: true,
+  notifications: { emailReports: true, statusChanges: false, push: true },
+};
