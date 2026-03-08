@@ -14,6 +14,7 @@ import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import type { SaveStatus } from '@/hooks/useProjectDocument';
 import {
