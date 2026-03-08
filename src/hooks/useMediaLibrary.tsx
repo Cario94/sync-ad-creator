@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { mediaAssetsService, getPublicUrl } from '@/services/mediaAssets';
+import { activityLogsService } from '@/services/activityLogs';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface MediaItem {
