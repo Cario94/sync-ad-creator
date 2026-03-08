@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Canvas, { CanvasRef } from '@/components/workspace/Canvas';
 import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import {
   Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle,
+  Download, FileJson, FileSpreadsheet, FileText, Copy,
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +16,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspace } from '@/contexts/WorkspaceContext';
 import type { SaveStatus } from '@/hooks/useProjectDocument';
-import { useState } from 'react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { exportJSON, exportCSV, exportMarkdown, copyToClipboard } from '@/lib/exportUtils';
+import { toast as sonnerToast } from 'sonner';
 
 /** Small pill showing current save status */
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
@@ -58,7 +63,7 @@ function WorkspaceInner() {
   const {
     isLoading, error, saveStatus, save,
     addCampaign, addAdSet, addAd,
-    undo, redo,
+    undo, redo, elements, connections,
   } = useWorkspace();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -184,7 +189,27 @@ function WorkspaceInner() {
               {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save
             </Button>
-            <Button size="sm">Publish</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Download className="h-4 w-4" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => { exportJSON(elements, connections, 'Campaign Project'); sonnerToast.success('JSON exported'); }}>
+                  <FileJson className="mr-2 h-4 w-4" /> JSON (full data)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { exportCSV(elements, connections, 'Campaign Project'); sonnerToast.success('CSV exported'); }}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV (spreadsheet)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { exportMarkdown(elements, connections, 'Campaign Project'); sonnerToast.success('Markdown exported'); }}>
+                  <FileText className="mr-2 h-4 w-4" /> Markdown (summary)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { copyToClipboard(elements, connections, 'Campaign Project').then(() => sonnerToast.success('Copied to clipboard')); }}>
+                  <Copy className="mr-2 h-4 w-4" /> Copy to clipboard
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
