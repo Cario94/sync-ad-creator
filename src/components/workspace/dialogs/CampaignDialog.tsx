@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { CalendarIcon, Save, Trash, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { toDateString } from '@/lib/dateUtils';
 
 interface CampaignDialogProps {
   open: boolean;
