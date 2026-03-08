@@ -11,16 +11,15 @@ import MultiSelectSettings from './MultiSelectSettings';
 
 interface CanvasProps {
   className?: string;
-  /** Initial elements loaded from DB */
   initialElements?: CanvasElement[];
-  /** Initial connections loaded from DB */
   initialConnections?: Connection[];
-  /** Initial viewport from DB */
   initialViewport?: { x: number; y: number; zoom: number };
-  /** Called whenever elements change */
   onElementsChange?: (elements: CanvasElement[]) => void;
-  /** Called whenever connections change */
   onConnectionsChange?: (connections: Connection[]) => void;
+  onAddCampaign?: () => void;
+  onAddAdSet?: () => void;
+  onAddAd?: () => void;
+  onSave?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onTidyLayout?: () => void;
