@@ -189,7 +189,27 @@ function WorkspaceInner() {
               {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save
             </Button>
-            <Button size="sm">Publish</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Download className="h-4 w-4" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => { exportJSON(elements, connections, 'Campaign Project'); sonnerToast.success('JSON exported'); }}>
+                  <FileJson className="mr-2 h-4 w-4" /> JSON (full data)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { exportCSV(elements, connections, 'Campaign Project'); sonnerToast.success('CSV exported'); }}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV (spreadsheet)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { exportMarkdown(elements, connections, 'Campaign Project'); sonnerToast.success('Markdown exported'); }}>
+                  <FileText className="mr-2 h-4 w-4" /> Markdown (summary)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { copyToClipboard(elements, connections, 'Campaign Project').then(() => sonnerToast.success('Copied to clipboard')); }}>
+                  <Copy className="mr-2 h-4 w-4" /> Copy to clipboard
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
