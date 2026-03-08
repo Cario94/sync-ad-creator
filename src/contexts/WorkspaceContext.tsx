@@ -303,7 +303,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   }, [findOpenPosition, smartMarkDirty, pushSnapshot]);
 
   const value: WorkspaceState = {
-    projectId, isLoading, error, saveStatus, save,
+    projectId, projectName, isLoading, error, saveStatus, save,
     elements, connections, setElements, setConnections,
     markDirty: smartMarkDirty,
     selectedElementIds, setSelectedElementIds,
