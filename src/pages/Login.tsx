@@ -12,6 +12,8 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [showVerificationHint, setShowVerificationHint] = useState(false);
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
