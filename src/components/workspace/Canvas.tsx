@@ -3,10 +3,11 @@ import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
 import CanvasElements from './CanvasElements';
 import { CanvasElement } from './types/canvas';
-import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
+import { useCanvasInteraction, CanvasSnapshot } from '@/hooks/useCanvasInteraction';
 import { useConnections, Connection } from '@/hooks/useConnections';
 import { toast } from 'sonner';
 import MultiSelectSettings from './MultiSelectSettings';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 
 interface CanvasProps {
   className?: string;
@@ -68,9 +69,16 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     removeConnection, setConnections
   } = useConnections();
 
-  // Keep a ref to connections so callbacks always see current value
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+
+  // ── Delete confirmation state ──
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const [pendingAffected, setPendingAffected] = useState<CanvasElement[]>([]);
+  const [pendingDirectTargets, setPendingDirectTargets] = useState<CanvasElement[]>([]);
 
   // Hydrate from DB
   useEffect(() => {
@@ -95,6 +103,16 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const selectedElements = elements.filter(el => selectedElementIds.includes(el.id));
   const [showMultiSettings, setShowMultiSettings] = useState(false);
+
+  /** Push current state as a history snapshot */
+  const pushSnapshot = useCallback((els: CanvasElement[], conns: Connection[]) => {
+    addToHistory({ elements: els, connections: conns });
+  }, [addToHistory]);
+
+  const applySnapshot = useCallback((snapshot: CanvasSnapshot) => {
+    setElements(snapshot.elements);
+    setConnections(snapshot.connections);
+  }, [setConnections]);
   
   const updateElementPosition = (id: string, position: { x: number; y: number }) => {
     setElements(prev => prev.map(el => el.id === id ? { ...el, position } : el));
@@ -145,7 +163,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const updateMultipleElements = (updates: Partial<CanvasElement>) => {
     setElements(prev => {
       const updated = prev.map(el => selectedElementIds.includes(el.id) ? { ...el, ...updates } : el);
-      addToHistory(updated);
+      pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
     toast.success(`Updated ${selectedElementIds.length} elements`);
@@ -154,28 +172,25 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const updateIndividualElement = (elementId: string, updates: Partial<CanvasElement>) => {
     setElements(prev => {
       const updated = prev.map(el => el.id === elementId ? { ...el, ...updates } : el);
-      addToHistory(updated);
+      pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
   };
 
-  // ── Edit element (from dialog save) ──
   const handleEditElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
     setElements(prev => {
       const updated = prev.map(el => el.id === id ? { ...el, ...updates } : el);
-      addToHistory(updated);
+      pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
-  }, [addToHistory]);
+  }, [pushSnapshot]);
 
-  // ── Cascade delete — collects all IDs to remove in one pass ──
+  // ── Cascade ID collection ──
   const collectCascadeIds = useCallback((ids: string[], currentElements: CanvasElement[]): Set<string> => {
     const conns = connectionsRef.current;
     const toRemove = new Set<string>(ids);
     const elementMap = new Map(currentElements.map(el => [el.id, el]));
 
-    // Iteratively expand: if a campaign is being removed, also remove connected adsets,
-    // and if an adset is being removed, also remove connected ads.
     let frontier = [...ids];
     while (frontier.length > 0) {
       const nextFrontier: string[] = [];
@@ -197,47 +212,57 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     return toRemove;
   }, []);
 
+  /** Execute deletion after confirmation */
+  const executeDelete = useCallback((ids: string[]) => {
+    const currentEls = elementsRef.current;
+    const currentConns = connectionsRef.current;
+    const idsToRemove = collectCascadeIds(ids, currentEls);
+
+    const newConns = currentConns.filter(
+      c => !idsToRemove.has(c.sourceId) && !idsToRemove.has(c.targetId)
+    );
+    const newEls = currentEls.filter(el => !idsToRemove.has(el.id));
+
+    setElements(newEls);
+    setConnections(newConns);
+    pushSnapshot(newEls, newConns);
+
+    setSelectedElementIds(prev => prev.filter(eid => !idsToRemove.has(eid)));
+    setShowMultiSettings(false);
+    toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
+  }, [collectCascadeIds, setConnections, pushSnapshot]);
+
+  /** Request delete with confirmation */
+  const requestDelete = useCallback((ids: string[]) => {
+    const currentEls = elementsRef.current;
+    const cascadeSet = collectCascadeIds(ids, currentEls);
+    const affected = currentEls.filter(el => cascadeSet.has(el.id));
+    const direct = currentEls.filter(el => ids.includes(el.id));
+
+    // Skip confirmation for simple single-element deletes without children
+    if (affected.length === direct.length && affected.length === 1) {
+      executeDelete(ids);
+      return;
+    }
+
+    setPendingDeleteIds(ids);
+    setPendingAffected(affected);
+    setPendingDirectTargets(direct);
+    setDeleteConfirmOpen(true);
+  }, [collectCascadeIds, executeDelete]);
+
   const handleDeleteElement = useCallback((id: string) => {
-    setElements(prev => {
-      const idsToRemove = collectCascadeIds([id], prev);
+    requestDelete([id]);
+  }, [requestDelete]);
 
-      // Clean up connections referencing removed elements
-      const conns = connectionsRef.current;
-      conns
-        .filter(c => idsToRemove.has(c.sourceId) || idsToRemove.has(c.targetId))
-        .forEach(c => removeConnection(c.id));
-
-      const updated = prev.filter(el => !idsToRemove.has(el.id));
-      addToHistory(updated);
-
-      toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
-      return updated;
-    });
-
-    setSelectedElementIds(prev => prev.filter(eid => eid !== id));
-    setShowMultiSettings(false);
-  }, [collectCascadeIds, removeConnection, addToHistory]);
-
-  /** Batch delete for multi-select (single setElements call) */
   const handleDeleteMultiple = useCallback((ids: string[]) => {
-    setElements(prev => {
-      const idsToRemove = collectCascadeIds(ids, prev);
+    requestDelete(ids);
+  }, [requestDelete]);
 
-      const conns = connectionsRef.current;
-      conns
-        .filter(c => idsToRemove.has(c.sourceId) || idsToRemove.has(c.targetId))
-        .forEach(c => removeConnection(c.id));
-
-      const updated = prev.filter(el => !idsToRemove.has(el.id));
-      addToHistory(updated);
-
-      toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
-      return updated;
-    });
-
-    setSelectedElementIds([]);
-    setShowMultiSettings(false);
-  }, [collectCascadeIds, removeConnection, addToHistory]);
+  const handleConfirmDelete = useCallback(() => {
+    executeDelete(pendingDeleteIds);
+    setDeleteConfirmOpen(false);
+  }, [pendingDeleteIds, executeDelete]);
 
   // ── Duplicate element ──
   const handleDuplicateElement = useCallback((id: string) => {
@@ -254,13 +279,12 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       };
 
       const updated = [...prev, newElement];
-      addToHistory(updated);
+      pushSnapshot(updated, connectionsRef.current);
       toast.success(`Duplicated ${source.type}`);
       return updated;
     });
-  }, [addToHistory]);
+  }, [pushSnapshot]);
 
-  // ── Helpers for child dialogs ──
   const getCampaigns = useCallback(() => 
     elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
   [elements]);
@@ -291,21 +315,20 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     });
     
     setElements(newElements);
-    addToHistory(newElements);
+    pushSnapshot(newElements, connectionsRef.current);
     onTidyLayout?.();
     toast.success('Layout organized successfully');
   };
 
   const addElement = useCallback((element: CanvasElement) => {
-    // Ensure config is always present
     const el: CanvasElement = { ...element, config: element.config ?? {} };
     setElements(prev => {
       const updated = [...prev, el];
-      addToHistory(updated);
+      pushSnapshot(updated, connectionsRef.current);
       return updated;
     });
     setSelectedElementIds([el.id]);
-  }, [addToHistory]);
+  }, [pushSnapshot]);
 
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
@@ -326,27 +349,41 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           e.preventDefault();
           const newElements = handlePaste();
           if (newElements) {
-            setElements(prev => [...prev, ...newElements]);
+            const updatedEls = [...elements, ...newElements];
+            setElements(updatedEls);
             setSelectedElementIds(newElements.map(el => el.id));
-            addToHistory([...elements, ...newElements]);
+            pushSnapshot(updatedEls, connectionsRef.current);
           }
         } else if (e.key === 'd') {
           e.preventDefault();
           const duplicatedElements = handleDuplicate(selectedElements);
           if (duplicatedElements) {
-            setElements(prev => [...prev, ...duplicatedElements]);
+            const updatedEls = [...elements, ...duplicatedElements];
+            setElements(updatedEls);
             setSelectedElementIds(duplicatedElements.map(el => el.id));
-            addToHistory([...elements, ...duplicatedElements]);
+            pushSnapshot(updatedEls, connectionsRef.current);
           }
         } else if (e.key === 'z') {
           e.preventDefault();
           if (e.shiftKey) {
-            const state = handleRedo();
-            if (state) { setElements(state); onRedo?.(); }
+            const snapshot = handleRedo();
+            if (snapshot) { applySnapshot(snapshot); onRedo?.(); }
           } else {
-            const state = handleUndo();
-            if (state) { setElements(state); onUndo?.(); }
+            const snapshot = handleUndo();
+            if (snapshot) { applySnapshot(snapshot); onUndo?.(); }
           }
+        }
+      }
+      
+      // Undo/redo should also work with no selection
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && selectedElementIds.length === 0) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          const snapshot = handleRedo();
+          if (snapshot) { applySnapshot(snapshot); onRedo?.(); }
+        } else {
+          const snapshot = handleUndo();
+          if (snapshot) { applySnapshot(snapshot); onUndo?.(); }
         }
       }
       
@@ -358,7 +395,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, onUndo, onRedo, handleDeleteMultiple]);
+  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, pushSnapshot, onUndo, onRedo, handleDeleteMultiple, applySnapshot]);
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
@@ -374,6 +411,15 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
           selectedElements={selectedElements}
         />
       )}
+
+      {/* Delete confirmation dialog — rendered outside canvas transform */}
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        affectedElements={pendingAffected}
+        directTargets={pendingDirectTargets}
+      />
       
       <CanvasContextMenu elementType="" onAddCampaign={onAddCampaign} onAddAdSet={onAddAdSet} onAddAd={onAddAd} onSave={onSave}>
         <div 

@@ -5,6 +5,7 @@ import AdSetDialog from './dialogs/AdSetDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement } from './types/canvas';
+import { fromDateString } from '@/lib/dateUtils';
 
 interface AdSetProps {
   name: string;
@@ -51,7 +52,8 @@ const AdSet: React.FC<AdSetProps> = ({
     campaignId: (config.campaignId as string) || '',
     budgetType: (config.budgetType as string) || 'campaign',
     budget: (config.budget as number) || 20,
-    startDate: config.startDate ? new Date(config.startDate as string) : new Date(),
+    startDate: fromDateString(config.startDate) || new Date(),
+    endDate: fromDateString(config.endDate),
     ageMin: (config.ageMin as number) || 18,
     ageMax: (config.ageMax as number) || 65,
     gender: (config.gender as string) || 'all',

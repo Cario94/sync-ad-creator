@@ -5,6 +5,7 @@ import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement } from './types/canvas';
+import { fromDateString } from '@/lib/dateUtils';
 
 interface CampaignProps {
   name: string;
@@ -54,7 +55,8 @@ const Campaign: React.FC<CampaignProps> = ({
     buyingType: (config.buyingType as string) || 'auction',
     budgetOptimization: config.budgetOptimization !== undefined ? (config.budgetOptimization as boolean) : true,
     bidStrategy: (config.bidStrategy as string) || 'lowest_cost',
-    startDate: config.startDate ? new Date(config.startDate as string) : new Date(),
+    startDate: fromDateString(config.startDate) || new Date(),
+    endDate: fromDateString(config.endDate),
     adStrategyType: (config.adStrategyType as string) || 'standard',
     placementStrategy: config.placementStrategy !== undefined ? (config.placementStrategy as boolean) : true,
   };
