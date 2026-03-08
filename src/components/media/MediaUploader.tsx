@@ -17,7 +17,7 @@ interface MediaUploaderProps {
 const MediaUploader: React.FC<MediaUploaderProps> = ({
   onUploadComplete,
   maxFiles = 10,
-  allowedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'],
+  allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime'],
   maxSize = 104857600, // 100MB in bytes
 }) => {
   const [isUploading, setIsUploading] = useState(false);
