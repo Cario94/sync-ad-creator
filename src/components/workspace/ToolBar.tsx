@@ -22,11 +22,13 @@ import {
 interface ToolBarProps {
   onUndo?: () => void;
   onRedo?: () => void;
+  onAddCampaign?: () => void;
+  onAddAdSet?: () => void;
+  onAddAd?: () => void;
 }
 
-const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo }) => {
+const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo, onAddCampaign, onAddAdSet, onAddAd }) => {
   const handleAction = (action: string) => {
-    console.log(`Action triggered: ${action}`);
     toast(`${action} clicked`, {
       description: 'This functionality will be available in the full version'
     });
@@ -63,110 +65,65 @@ const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo }) => {
       {/* Center section - Main actions */}
       <div className="flex space-x-1 items-center">
         <TooltipProvider>
-          {/* Creation buttons */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleAction("Add Campaign")}
-                className="px-3"
-              >
+              <Button variant="secondary" size="sm" onClick={onAddCampaign} className="px-3">
                 <Plus className="h-4 w-4 mr-1" />
                 Campaign
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Add new Campaign</p>
-            </TooltipContent>
+            <TooltipContent><p>Add new Campaign</p></TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleAction("Add Ad Set")}
-                className="px-3"
-              >
+              <Button variant="secondary" size="sm" onClick={onAddAdSet} className="px-3">
                 <Plus className="h-4 w-4 mr-1" />
                 Ad Set
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Add new Ad Set</p>
-            </TooltipContent>
+            <TooltipContent><p>Add new Ad Set</p></TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleAction("Add Ad")}
-                className="px-3"
-              >
+              <Button variant="secondary" size="sm" onClick={onAddAd} className="px-3">
                 <Plus className="h-4 w-4 mr-1" />
                 Ad
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Add new Ad</p>
-            </TooltipContent>
+            <TooltipContent><p>Add new Ad</p></TooltipContent>
           </Tooltip>
 
           <div className="h-6 w-px bg-border mx-1"></div>
 
-          {/* Media Library */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleAction("Media Library")}
-                className="h-9 w-9"
-              >
+              <Button variant="ghost" size="icon" onClick={() => handleAction("Media Library")} className="h-9 w-9">
                 <Image className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Media Library</p>
-            </TooltipContent>
+            <TooltipContent><p>Media Library</p></TooltipContent>
           </Tooltip>
 
           <div className="h-6 w-px bg-border mx-1"></div>
 
-          {/* Undo/Redo */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onUndo}
-                className="h-9 w-9"
-              >
+              <Button variant="ghost" size="icon" onClick={onUndo} className="h-9 w-9">
                 <Undo className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Undo (Ctrl+Z)</p>
-            </TooltipContent>
+            <TooltipContent><p>Undo (Ctrl+Z)</p></TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onRedo}
-                className="h-9 w-9"
-              >
+              <Button variant="ghost" size="icon" onClick={onRedo} className="h-9 w-9">
                 <Redo className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Redo (Ctrl+Shift+Z)</p>
-            </TooltipContent>
+            <TooltipContent><p>Redo (Ctrl+Shift+Z)</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -176,18 +133,11 @@ const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo }) => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleAction("Settings")}
-                className="h-9 w-9"
-              >
+              <Button variant="ghost" size="icon" onClick={() => handleAction("Settings")} className="h-9 w-9">
                 <Settings className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Settings</p>
-            </TooltipContent>
+            <TooltipContent><p>Settings</p></TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
