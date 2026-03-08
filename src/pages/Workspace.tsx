@@ -65,6 +65,7 @@ function WorkspaceInner() {
     isLoading, error, saveStatus, save,
     addCampaign, addAdSet, addAd,
     undo, redo, elements, connections,
+    markDirty,
   } = useWorkspace();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -75,6 +76,7 @@ function WorkspaceInner() {
   const { toast } = useToast();
   const canvasRef = useRef<CanvasRef>(null);
   const { user, signOut } = useAuth();
+  const { preferences } = useUserSettings();
 
   const handleSave = async () => {
     try {
