@@ -4,6 +4,7 @@ import { useProjectDocument, type ProjectDocumentState, type SaveStatus, type St
 import type { CanvasElement } from '@/components/workspace/types/canvas';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
+import { projectsService } from '@/services/projects';
 import { toast } from 'sonner';
 
 // ── History ──
