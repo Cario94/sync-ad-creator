@@ -90,15 +90,18 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 
   // Track mouse position in world coordinates for connection line preview
   const [worldMousePos, setWorldMousePos] = useState({ x: 0, y: 0 });
+  // Use a ref for viewport in the mousemove handler to avoid stale closures
+  const vpRef = useRef(viewport);
+  vpRef.current = viewport;
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     canvasMouseMove(e);
     // Update world mouse position for in-progress connections
-    if (isCreatingConnection && containerRef.current) {
+    if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setWorldMousePos(screenToWorld(e.clientX, e.clientY, rect, viewport));
+      setWorldMousePos(screenToWorld(e.clientX, e.clientY, rect, vpRef.current));
     }
-  }, [canvasMouseMove, isCreatingConnection, containerRef, viewport]);
+  }, [canvasMouseMove, containerRef]);
 
   const selectedElements = elements.filter(el => selectedElementIds.includes(el.id));
   const [showMultiSettings, setShowMultiSettings] = useState(false);
