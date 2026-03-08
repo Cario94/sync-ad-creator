@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateAdSetConfig } from './types/canvas';
 import NodeValidationBadge from './NodeValidationBadge';
 import { useNodeValidation } from '@/hooks/useNodeValidation';
+import type { Viewport } from '@/hooks/useCanvasInteraction';
 
 interface AdSetProps {
   name: string;
@@ -25,10 +26,14 @@ interface AdSetProps {
   onDelete?: () => void;
   onDuplicate?: () => void;
   campaigns?: { id: string; name: string }[];
+  viewport?: Viewport;
+  containerRef?: React.RefObject<HTMLDivElement>;
+  snapSize?: number;
+  onDragEnd?: () => void;
 }
 
-const AdSet: React.FC<AdSetProps> = ({ 
-  name, 
+const AdSet: React.FC<AdSetProps> = ({
+  name,
   config = {},
   initialPosition = { x: 0, y: 0 },
   id = `adset-${Date.now()}`,
@@ -44,6 +49,10 @@ const AdSet: React.FC<AdSetProps> = ({
   onDelete,
   onDuplicate,
   campaigns = [],
+  viewport,
+  containerRef,
+  snapSize = 0,
+  onDragEnd: onDragEndProp,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateAdSetConfig(config);
@@ -54,6 +63,11 @@ const AdSet: React.FC<AdSetProps> = ({
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
+    viewport: viewport ?? { x: 0, y: 0, zoom: 1 },
+    containerRef,
+    snapSize,
+    nodeId: id,
+    onDragEnd: onDragEndProp,
   });
 
   useEffect(() => { setIsSelected(isSelected); }, [isSelected, setIsSelected]);
@@ -95,8 +109,8 @@ const AdSet: React.FC<AdSetProps> = ({
 
   return (
     <>
-      <CanvasContextMenu 
-        onEdit={() => setDialogOpen(true)} 
+      <CanvasContextMenu
+        onEdit={() => setDialogOpen(true)}
         onConnect={onStartConnection}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
@@ -105,19 +119,19 @@ const AdSet: React.FC<AdSetProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-4 w-66 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab relative",
+            "absolute p-4 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 cursor-grab relative",
             isDragging ? "cursor-grabbing shadow-lg opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-lg z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            transition: isDragging ? 'none' : 'box-shadow 0.15s, transform 0.15s',
             minHeight: '130px',
-            width: '264px'
+            width: '264px',
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) handleConnectionComplete(e);
@@ -137,9 +151,9 @@ const AdSet: React.FC<AdSetProps> = ({
           <div className="mt-2 text-xs text-muted-foreground">
             Budget: ${typed.budget}/day • {typed.locations.join(', ')}
           </div>
-          
+
           <button
-            className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
+            className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}
             title="Connect to Ad"
           >

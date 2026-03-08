@@ -1,9 +1,16 @@
-
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Connection } from '@/hooks/useConnections';
 import ConnectionsRenderer from './ConnectionsRenderer';
 import ElementsRenderer from './ElementsRenderer';
-import { CanvasElement, ElementPosition } from './types/canvas';
+import { CanvasElement } from './types/canvas';
+import type { Viewport } from '@/hooks/useCanvasInteraction';
+
+// Known node sizes in world coordinates
+const NODE_SIZES: Record<string, { w: number; h: number }> = {
+  campaign: { w: 288, h: 140 },
+  adset: { w: 264, h: 130 },
+  ad: { w: 240, h: 120 },
+};
 
 interface CanvasElementsProps {
   elements: CanvasElement[];
@@ -22,9 +29,14 @@ interface CanvasElementsProps {
   onDuplicateElement: (id: string) => void;
   getCampaigns: () => { id: string; name: string }[];
   getAdSets: () => { id: string; name: string }[];
+  viewport: Viewport;
+  containerRef: React.RefObject<HTMLDivElement>;
+  snapSize: number;
+  worldMousePos: { x: number; y: number };
+  onDragEnd: () => void;
 }
 
-const CanvasElements: React.FC<CanvasElementsProps> = ({ 
+const CanvasElements: React.FC<CanvasElementsProps> = ({
   elements,
   connections,
   isCreatingConnection,
@@ -41,100 +53,51 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   onDuplicateElement,
   getCampaigns,
   getAdSets,
+  viewport,
+  containerRef,
+  snapSize,
+  worldMousePos,
+  onDragEnd,
 }) => {
-  const [elementPositions, setElementPositions] = useState<ElementPosition[]>([]);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const elementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    if (!isCreatingConnection || !svgRef.current) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!svgRef.current) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  // Derive element positions from model data (no DOM measurement!)
+  const elementPositions = elements.map(el => {
+    const size = NODE_SIZES[el.type] || { w: 256, h: 120 };
+    return {
+      id: el.id,
+      x: el.position.x,
+      y: el.position.y,
+      width: size.w,
+      height: size.h,
     };
+  });
 
+  // Cancel in-progress connection on mouseup in empty space
+  React.useEffect(() => {
+    if (!isCreatingConnection) return;
     const handleMouseUp = () => { onCancelConnection(); };
-
-    document.addEventListener('mousemove', handleMouseMove);
+    // We use capture so this fires even if the event is on the canvas background
     document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+    return () => { document.removeEventListener('mouseup', handleMouseUp); };
   }, [isCreatingConnection, onCancelConnection]);
-
-  useEffect(() => {
-    const updateElementPositions = () => {
-      const positions: ElementPosition[] = [];
-      elementsRef.current.forEach((element, id) => {
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          const svgRect = svgRef.current?.getBoundingClientRect();
-          if (svgRect) {
-            positions.push({
-              id,
-              x: rect.left - svgRect.left,
-              y: rect.top - svgRect.top,
-              width: rect.width,
-              height: rect.height
-            });
-          }
-        }
-      });
-      setElementPositions(positions);
-    };
-
-    let rafId: number;
-    const scheduleUpdate = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateElementPositions);
-    };
-
-    scheduleUpdate();
-    
-    const resizeObserver = new ResizeObserver(scheduleUpdate);
-    elementsRef.current.forEach(element => {
-      if (element) resizeObserver.observe(element);
-    });
-    if (svgRef.current?.parentElement) {
-      resizeObserver.observe(svgRef.current.parentElement);
-    }
-    
-    return () => {
-      cancelAnimationFrame(rafId);
-      resizeObserver.disconnect();
-    };
-  }, [elements]);
-
-  const handleElementRef = (id: string, element: HTMLDivElement | null) => {
-    if (element) {
-      elementsRef.current.set(id, element);
-    } else {
-      elementsRef.current.delete(id);
-    }
-  };
 
   return (
     <>
+      {/* SVG layer for connections – positioned in world coordinates */}
       <svg
-        ref={svgRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
-        style={{ overflow: 'visible' }}
+        className="absolute top-0 left-0 pointer-events-none z-0"
+        style={{ overflow: 'visible', width: '100%', height: '100%' }}
       >
-        <ConnectionsRenderer 
+        <ConnectionsRenderer
           connections={connections}
           elementPositions={elementPositions}
           isCreatingConnection={isCreatingConnection}
           activeConnection={activeConnection}
-          mousePosition={mousePosition}
+          mousePosition={worldMousePos}
           onRemoveConnection={onRemoveConnection}
         />
       </svg>
-      
-      <ElementsRenderer 
+
+      <ElementsRenderer
         elements={elements}
         selectedElementIds={selectedElementIds}
         isCreatingConnection={isCreatingConnection}
@@ -148,7 +111,11 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
         onDuplicateElement={onDuplicateElement}
         getCampaigns={getCampaigns}
         getAdSets={getAdSets}
-        elementRefs={handleElementRef}
+        elementRefs={() => {}} // No longer needed for DOM measurement
+        viewport={viewport}
+        containerRef={containerRef}
+        snapSize={snapSize}
+        onDragEnd={onDragEnd}
       />
     </>
   );
