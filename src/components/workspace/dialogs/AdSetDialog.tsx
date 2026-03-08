@@ -1,15 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,109 +13,89 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { CalendarIcon, Save, Trash, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { toDateString } from '@/lib/dateUtils';
+import { toDateString, fromDateString } from '@/lib/dateUtils';
+import type { AdSetConfig, BudgetType, BidStrategy, OptimizationGoal, Gender } from '../types/canvas';
 
 interface AdSetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  adSet?: {
-    id: string;
-    name: string;
-    campaignId: string;
-    budgetType: string;
-    budget: number;
-    startDate: Date;
-    endDate?: Date;
-    ageMin: number;
-    ageMax: number;
-    gender: string;
-    locations: string[];
-    placements: string[];
-    bidStrategy: string;
-    optimizationGoal: string;
-  };
+  adSetId?: string;
+  adSetName?: string;
+  config: AdSetConfig;
   campaigns?: { id: string; name: string }[];
-  onSave: (adSet: any) => void;
+  onSave: (data: Record<string, unknown> & { name: string }) => void;
   onDelete?: () => void;
 }
 
-const defaultFormData = (adSet?: AdSetDialogProps['adSet'], campaigns?: { id: string; name: string }[]) => ({
-  name: adSet?.name || '',
-  campaignId: adSet?.campaignId || (campaigns && campaigns.length > 0 ? campaigns[0].id : ''),
-  budgetType: adSet?.budgetType || 'campaign',
-  budget: adSet?.budget || 20,
-  startDate: adSet?.startDate || new Date(),
-  endDate: adSet?.endDate,
-  ageMin: adSet?.ageMin || 18,
-  ageMax: adSet?.ageMax || 65,
-  gender: adSet?.gender || 'all',
-  locations: adSet?.locations || ['United States'],
-  placements: adSet?.placements || [],
-  automaticPlacements: adSet?.placements ? adSet.placements.length === 0 : true,
-  bidStrategy: adSet?.bidStrategy || 'lowest_cost',
-  optimizationGoal: adSet?.optimizationGoal || 'clicks',
-});
-
 const AdSetDialog: React.FC<AdSetDialogProps> = ({
-  open, onOpenChange, adSet, campaigns = [], onSave, onDelete
+  open, onOpenChange, adSetId, adSetName, config, campaigns = [], onSave, onDelete
 }) => {
-  const isEditing = !!adSet;
-  const [formData, setFormData] = useState(defaultFormData(adSet, campaigns));
+  const isEditing = !!adSetId;
 
-  // Re-sync when dialog opens
+  const [name, setName] = useState(adSetName ?? '');
+  const [budgetType, setBudgetType] = useState<BudgetType>(config.budgetType);
+  const [budget, setBudget] = useState(config.budget);
+  const [optimizationGoal, setOptimizationGoal] = useState<OptimizationGoal>(config.optimizationGoal);
+  const [bidStrategy, setBidStrategy] = useState<BidStrategy>(config.bidStrategy);
+  const [placements, setPlacements] = useState<string[]>(config.placements);
+  const [automaticPlacements, setAutomaticPlacements] = useState(config.placements.length === 0);
+  const [locations, setLocations] = useState<string[]>(config.locations);
+  const [ageMin, setAgeMin] = useState(config.ageMin);
+  const [ageMax, setAgeMax] = useState(config.ageMax);
+  const [gender, setGender] = useState<Gender>(config.gender);
+  const [startDate, setStartDate] = useState<Date | undefined>(fromDateString(config.startDate));
+  const [endDate, setEndDate] = useState<Date | undefined>(fromDateString(config.endDate));
+  const [notes, setNotes] = useState(config.notes);
+  const [campaignId, setCampaignId] = useState(config.campaignId ?? (campaigns[0]?.id ?? ''));
+
   useEffect(() => {
-    if (open) setFormData(defaultFormData(adSet, campaigns));
-  }, [open, adSet?.id]);
+    if (open) {
+      setName(adSetName ?? '');
+      setBudgetType(config.budgetType);
+      setBudget(config.budget);
+      setOptimizationGoal(config.optimizationGoal);
+      setBidStrategy(config.bidStrategy);
+      setPlacements(config.placements);
+      setAutomaticPlacements(config.placements.length === 0);
+      setLocations(config.locations);
+      setAgeMin(config.ageMin);
+      setAgeMax(config.ageMax);
+      setGender(config.gender);
+      setStartDate(fromDateString(config.startDate));
+      setEndDate(fromDateString(config.endDate));
+      setNotes(config.notes);
+      setCampaignId(config.campaignId ?? (campaigns[0]?.id ?? ''));
+    }
+  }, [open, adSetId]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
-
-  const handleDateChange = (name: string, date: Date | undefined) => {
-    setFormData(prev => ({ ...prev, [name]: date }));
-  };
-
-  const togglePlacement = (placement: string) => {
-    setFormData(prev => {
-      const newPlacements = prev.placements.includes(placement)
-        ? prev.placements.filter(p => p !== placement)
-        : [...prev.placements, placement];
-      return { ...prev, placements: newPlacements };
-    });
+  const togglePlacement = (p: string) => {
+    setPlacements(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   };
 
   const handleSave = () => {
-    if (!formData.name) {
-      toast.error("Ad Set name is required");
-      return;
-    }
-    const finalData = {
-      ...formData,
-      placements: formData.automaticPlacements ? [] : formData.placements,
-      startDate: toDateString(formData.startDate),
-      endDate: toDateString(formData.endDate),
+    if (!name.trim()) { toast.error("Ad Set name is required"); return; }
+    const data: Record<string, unknown> & { name: string } = {
+      name: name.trim(),
+      budgetType,
+      budget,
+      optimizationGoal,
+      bidStrategy,
+      placements: automaticPlacements ? [] : placements,
+      locations,
+      ageMin,
+      ageMax,
+      gender,
+      startDate: toDateString(startDate),
+      endDate: toDateString(endDate),
+      notes,
+      campaignId,
     };
-    onSave({ ...adSet, ...finalData });
+    onSave(data);
     onOpenChange(false);
-    toast.success(`Ad Set ${isEditing ? 'updated' : 'created'} successfully`);
+    toast.success(`Ad Set ${isEditing ? 'updated' : 'created'}`);
   };
 
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete();
-      onOpenChange(false);
-      toast.success("Ad Set deleted successfully");
-    }
-  };
+  const handleDelete = () => { onDelete?.(); onOpenChange(false); };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,49 +108,42 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
 
         <Tabs defaultValue="details" className="w-full mt-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="details">Ad Set Details</TabsTrigger>
-            <TabsTrigger value="audience">Audience & Targeting</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="audience">Audience</TabsTrigger>
             <TabsTrigger value="placements">Placements & Delivery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Ad Set Name</Label>
-                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter ad set name" />
+                <Label>Ad Set Name</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Enter ad set name" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="campaignId">Campaign</Label>
-                <Select value={formData.campaignId} onValueChange={(v) => handleSelectChange('campaignId', v)} disabled={campaigns.length === 0}>
-                  <SelectTrigger><SelectValue placeholder="Select campaign" /></SelectTrigger>
-                  <SelectContent>
-                    {campaigns.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {campaigns.length === 0 && <p className="text-xs text-muted-foreground mt-1">No campaigns available.</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="budgetType">Budget Type</Label>
-                <Select value={formData.budgetType} onValueChange={(v) => handleSelectChange('budgetType', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select budget type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="campaign">Use Campaign Budget Optimization</SelectItem>
-                    <SelectItem value="adset">Ad Set Level Budget</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.budgetType === 'adset' && (
+              {campaigns.length > 0 && (
                 <div className="space-y-2">
-                  <Label htmlFor="budget">Daily Budget</Label>
-                  <Input id="budget" name="budget" type="number" value={formData.budget} onChange={handleInputChange} placeholder="Enter daily budget" />
+                  <Label>Campaign</Label>
+                  <Select value={campaignId} onValueChange={setCampaignId}>
+                    <SelectTrigger><SelectValue placeholder="Select campaign" /></SelectTrigger>
+                    <SelectContent>
+                      {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
-
+              <div className="space-y-2">
+                <Label>Budget Type</Label>
+                <Select value={budgetType} onValueChange={v => setBudgetType(v as BudgetType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily Budget</SelectItem>
+                    <SelectItem value="lifetime">Lifetime Budget</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Budget ($)</Label>
+                <Input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))} />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Start Date</Label>
@@ -182,11 +151,11 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.startDate ? format(formData.startDate, "PPP") : <span>Pick a date</span>}
+                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={formData.startDate} onSelect={(d) => handleDateChange('startDate', d)} initialFocus className="pointer-events-auto" />
+                      <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -196,11 +165,11 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.endDate ? format(formData.endDate, "PPP") : <span>Pick a date</span>}
+                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={formData.endDate} onSelect={(d) => handleDateChange('endDate', d)} initialFocus className="pointer-events-auto" />
+                      <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -212,33 +181,29 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Location Targeting</Label>
-                <Input id="locations" name="locations" value={formData.locations.join(', ')} onChange={(e) => setFormData(prev => ({ ...prev, locations: e.target.value.split(',').map(l => l.trim()) }))} placeholder="Enter locations (comma separated)" />
+                <Input value={locations.join(', ')} onChange={e => setLocations(e.target.value.split(',').map(l => l.trim()).filter(Boolean))} placeholder="Locations (comma separated)" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ageMin">Minimum Age</Label>
-                  <Input id="ageMin" name="ageMin" type="number" min={13} max={65} value={formData.ageMin} onChange={handleInputChange} />
+                  <Label>Min Age</Label>
+                  <Input type="number" min={13} max={65} value={ageMin} onChange={e => setAgeMin(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ageMax">Maximum Age</Label>
-                  <Input id="ageMax" name="ageMax" type="number" min={13} max={65} value={formData.ageMax} onChange={handleInputChange} />
+                  <Label>Max Age</Label>
+                  <Input type="number" min={13} max={65} value={ageMax} onChange={e => setAgeMax(Number(e.target.value))} />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>Gender</Label>
-                <RadioGroup value={formData.gender} onValueChange={(v) => handleSelectChange('gender', v)} className="flex space-x-4">
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="gender-all" /><Label htmlFor="gender-all">All</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="male" id="gender-male" /><Label htmlFor="gender-male">Male</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="female" id="gender-female" /><Label htmlFor="gender-female">Female</Label></div>
+                <RadioGroup value={gender} onValueChange={v => setGender(v as Gender)} className="flex space-x-4">
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="g-all" /><Label htmlFor="g-all">All</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="male" id="g-m" /><Label htmlFor="g-m">Male</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="female" id="g-f" /><Label htmlFor="g-f">Female</Label></div>
                 </RadioGroup>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="detailedTargeting">Detailed Targeting</Label>
-                <Input id="detailedTargeting" placeholder="Interests, behaviors, demographics" />
-                <p className="text-xs text-muted-foreground mt-1">Enter interests separated by commas</p>
+                <Label>Notes</Label>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Internal notes…" rows={2} />
               </div>
             </div>
           </TabsContent>
@@ -246,31 +211,29 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
           <TabsContent value="placements" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="flex items-center space-x-2">
-                <Checkbox id="automaticPlacements" checked={formData.automaticPlacements} onCheckedChange={(c) => {
-                  handleCheckboxChange('automaticPlacements', c === true);
-                  if (c) setFormData(prev => ({ ...prev, placements: [] }));
+                <Checkbox id="autoPlacements" checked={automaticPlacements} onCheckedChange={c => {
+                  setAutomaticPlacements(c === true);
+                  if (c) setPlacements([]);
                 }} />
-                <Label htmlFor="automaticPlacements">Automatic Placements (Recommended)</Label>
+                <Label htmlFor="autoPlacements">Automatic Placements (Recommended)</Label>
               </div>
-
-              {!formData.automaticPlacements && (
-                <div className="space-y-2 border border-border rounded-md p-4">
+              {!automaticPlacements && (
+                <div className="border border-border rounded-md p-4">
                   <Label>Manual Placements</Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['Facebook Feed', 'Instagram Feed', 'Facebook Reels', 'Instagram Reels', 'Facebook Stories', 'Instagram Stories', 'Facebook Right Column', 'Messenger'].map(placement => (
-                      <div key={placement} className="flex items-center space-x-2">
-                        <Checkbox id={`placement-${placement}`} checked={formData.placements.includes(placement)} onCheckedChange={() => togglePlacement(placement)} />
-                        <Label htmlFor={`placement-${placement}`}>{placement}</Label>
+                    {['Facebook Feed','Instagram Feed','Facebook Reels','Instagram Reels','Facebook Stories','Instagram Stories','Facebook Right Column','Messenger'].map(p => (
+                      <div key={p} className="flex items-center space-x-2">
+                        <Checkbox id={`pl-${p}`} checked={placements.includes(p)} onCheckedChange={() => togglePlacement(p)} />
+                        <Label htmlFor={`pl-${p}`}>{p}</Label>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
               <div className="space-y-2">
-                <Label htmlFor="bidStrategy">Bid Strategy</Label>
-                <Select value={formData.bidStrategy} onValueChange={(v) => handleSelectChange('bidStrategy', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select bid strategy" /></SelectTrigger>
+                <Label>Bid Strategy</Label>
+                <Select value={bidStrategy} onValueChange={v => setBidStrategy(v as BidStrategy)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lowest_cost">Lowest Cost</SelectItem>
                     <SelectItem value="cost_cap">Cost Cap</SelectItem>
@@ -278,11 +241,10 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="optimizationGoal">Optimization Goal</Label>
-                <Select value={formData.optimizationGoal} onValueChange={(v) => handleSelectChange('optimizationGoal', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select optimization goal" /></SelectTrigger>
+                <Label>Optimization Goal</Label>
+                <Select value={optimizationGoal} onValueChange={v => setOptimizationGoal(v as OptimizationGoal)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="clicks">Clicks</SelectItem>
                     <SelectItem value="impressions">Impressions</SelectItem>
@@ -298,7 +260,7 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
 
         <DialogFooter className="flex justify-between mt-6">
           <div className="flex space-x-2">
-            {isEditing && (
+            {isEditing && onDelete && (
               <Button variant="destructive" onClick={handleDelete}>
                 <Trash className="mr-2 h-4 w-4" />Delete
               </Button>

@@ -1,104 +1,93 @@
-
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Image, Save, Trash, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import { MediaItem } from '@/hooks/useMediaLibrary';
+import type { AdConfig, CallToAction } from '../types/canvas';
 
 interface AdDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ad?: {
-    id: string;
-    name: string;
-    adSetId: string;
-    primaryText: string;
-    headline: string;
-    description: string;
-    callToAction: string;
-    imageUrl?: string;
-    destinationUrl: string;
-    displayUrl: string;
-    trackingPixel?: string;
-    conversionEvent?: string;
-  };
+  adId?: string;
+  adName?: string;
+  config: AdConfig;
   adSets?: { id: string; name: string }[];
-  onSave: (ad: any) => void;
+  onSave: (data: Record<string, unknown> & { name: string }) => void;
   onDelete?: () => void;
 }
 
-const defaultFormData = (ad?: AdDialogProps['ad'], adSets?: { id: string; name: string }[]) => ({
-  name: ad?.name || '',
-  adSetId: ad?.adSetId || (adSets && adSets.length > 0 ? adSets[0].id : ''),
-  primaryText: ad?.primaryText || '',
-  headline: ad?.headline || '',
-  description: ad?.description || '',
-  callToAction: ad?.callToAction || 'learn_more',
-  imageUrl: ad?.imageUrl || '',
-  destinationUrl: ad?.destinationUrl || 'https://',
-  displayUrl: ad?.displayUrl || '',
-  perPlacementCreative: false,
-  trackingPixel: ad?.trackingPixel || '',
-  conversionEvent: ad?.conversionEvent || 'purchase',
-});
-
 const AdDialog: React.FC<AdDialogProps> = ({
-  open, onOpenChange, ad, adSets = [], onSave, onDelete
+  open, onOpenChange, adId, adName, config, adSets = [], onSave, onDelete
 }) => {
-  const isEditing = !!ad;
-  const [formData, setFormData] = useState(defaultFormData(ad, adSets));
+  const isEditing = !!adId;
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
 
-  // Re-sync when dialog opens
+  const [name, setName] = useState(adName ?? '');
+  const [primaryText, setPrimaryText] = useState(config.primaryText);
+  const [headline, setHeadline] = useState(config.headline);
+  const [description, setDescription] = useState(config.description);
+  const [callToAction, setCallToAction] = useState<CallToAction>(config.callToAction);
+  const [destinationUrl, setDestinationUrl] = useState(config.destinationUrl);
+  const [displayUrl, setDisplayUrl] = useState(config.displayUrl);
+  const [imageUrl, setImageUrl] = useState(config.imageUrl);
+  const [mediaAssetId, setMediaAssetId] = useState(config.mediaAssetId);
+  const [trackingPixel, setTrackingPixel] = useState(config.trackingPixel);
+  const [notes, setNotes] = useState(config.notes);
+  const [adSetId, setAdSetId] = useState(config.adSetId ?? (adSets[0]?.id ?? ''));
+
   useEffect(() => {
-    if (open) setFormData(defaultFormData(ad, adSets));
-  }, [open, ad?.id]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
+    if (open) {
+      setName(adName ?? '');
+      setPrimaryText(config.primaryText);
+      setHeadline(config.headline);
+      setDescription(config.description);
+      setCallToAction(config.callToAction);
+      setDestinationUrl(config.destinationUrl);
+      setDisplayUrl(config.displayUrl);
+      setImageUrl(config.imageUrl);
+      setMediaAssetId(config.mediaAssetId);
+      setTrackingPixel(config.trackingPixel);
+      setNotes(config.notes);
+      setAdSetId(config.adSetId ?? (adSets[0]?.id ?? ''));
+    }
+  }, [open, adId]);
 
   const handleMediaSelect = (item: MediaItem) => {
-    setFormData(prev => ({ ...prev, imageUrl: item.url }));
+    setImageUrl(item.url);
+    setMediaAssetId(item.id);
     toast.success(`Selected: ${item.name}`);
   };
 
   const handleSave = () => {
-    if (!formData.name) { toast.error("Ad name is required"); return; }
-    if (!formData.headline) { toast.error("Headline is required"); return; }
-    onSave({ ...ad, ...formData });
+    if (!name.trim()) { toast.error("Ad name is required"); return; }
+    if (!headline.trim()) { toast.error("Headline is required"); return; }
+    const data: Record<string, unknown> & { name: string } = {
+      name: name.trim(),
+      primaryText,
+      headline,
+      description,
+      callToAction,
+      destinationUrl,
+      displayUrl,
+      imageUrl,
+      mediaAssetId,
+      trackingPixel,
+      notes,
+      adSetId,
+    };
+    onSave(data);
     onOpenChange(false);
-    toast.success(`Ad ${isEditing ? 'updated' : 'created'} successfully`);
+    toast.success(`Ad ${isEditing ? 'updated' : 'created'}`);
   };
 
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete();
-      onOpenChange(false);
-      toast.success("Ad deleted successfully");
-    }
-  };
+  const handleDelete = () => { onDelete?.(); onOpenChange(false); };
 
   return (
     <>
@@ -108,55 +97,49 @@ const AdDialog: React.FC<AdDialogProps> = ({
             <DialogTitle className="text-xl font-semibold">
               {isEditing ? 'Edit Ad' : 'Create Ad'}
             </DialogTitle>
-            <DialogDescription>Customize your ad details, creative elements, and tracking settings.</DialogDescription>
+            <DialogDescription>Customize your ad details, creative, and tracking.</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="details" className="w-full mt-4">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="details">Ad Details</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="creative">Creative & Media</TabsTrigger>
-              <TabsTrigger value="tracking">Tracking & Settings</TabsTrigger>
+              <TabsTrigger value="tracking">Tracking</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-4 mt-4">
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Ad Name</Label>
-                  <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter ad name" />
+                  <Label>Ad Name</Label>
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Enter ad name" />
                 </div>
-
+                {adSets.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Ad Set</Label>
+                    <Select value={adSetId} onValueChange={setAdSetId}>
+                      <SelectTrigger><SelectValue placeholder="Select ad set" /></SelectTrigger>
+                      <SelectContent>
+                        {adSets.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <Label htmlFor="adSetId">Ad Set</Label>
-                  <Select value={formData.adSetId} onValueChange={(v) => handleSelectChange('adSetId', v)} disabled={adSets.length === 0}>
-                    <SelectTrigger><SelectValue placeholder="Select ad set" /></SelectTrigger>
-                    <SelectContent>
-                      {adSets.map(as => (
-                        <SelectItem key={as.id} value={as.id}>{as.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {adSets.length === 0 && <p className="text-xs text-muted-foreground mt-1">No ad sets available.</p>}
+                  <Label>Primary Text</Label>
+                  <Textarea value={primaryText} onChange={e => setPrimaryText(e.target.value)} placeholder="Main ad text" rows={3} />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="primaryText">Primary Text</Label>
-                  <Textarea id="primaryText" name="primaryText" value={formData.primaryText} onChange={handleInputChange} placeholder="Enter the main text for your ad" rows={3} />
+                  <Label>Headline</Label>
+                  <Input value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Ad headline" />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="headline">Headline</Label>
-                  <Input id="headline" name="headline" value={formData.headline} onChange={handleInputChange} placeholder="Enter ad headline" />
+                  <Label>Description (Optional)</Label>
+                  <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ad description" />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Input id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder="Enter ad description" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="callToAction">Call to Action</Label>
-                  <Select value={formData.callToAction} onValueChange={(v) => handleSelectChange('callToAction', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select call to action" /></SelectTrigger>
+                  <Label>Call to Action</Label>
+                  <Select value={callToAction} onValueChange={v => setCallToAction(v as CallToAction)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="learn_more">Learn More</SelectItem>
                       <SelectItem value="shop_now">Shop Now</SelectItem>
@@ -177,17 +160,16 @@ const AdDialog: React.FC<AdDialogProps> = ({
                 <div className="space-y-2">
                   <Label>Image/Video</Label>
                   <div className="border border-dashed border-border rounded-md p-4 text-center">
-                    {formData.imageUrl ? (
+                    {imageUrl ? (
                       <div className="space-y-4">
                         <div className="aspect-video bg-secondary/30 rounded-md overflow-hidden flex items-center justify-center">
-                          <img src={formData.imageUrl} alt="Selected media" className="max-h-full max-w-full object-contain" />
+                          <img src={imageUrl} alt="Selected media" className="max-h-full max-w-full object-contain" />
                         </div>
-                        <p className="text-sm text-muted-foreground">Media selected</p>
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="sm" onClick={() => setMediaLibraryOpen(true)}>
-                            <Upload className="mr-2 h-4 w-4" />Change Media
+                            <Upload className="mr-2 h-4 w-4" />Change
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}>
+                          <Button variant="outline" size="sm" onClick={() => { setImageUrl(''); setMediaAssetId(''); }}>
                             <X className="mr-2 h-4 w-4" />Remove
                           </Button>
                         </div>
@@ -197,7 +179,6 @@ const AdDialog: React.FC<AdDialogProps> = ({
                         <div className="aspect-video bg-secondary/30 rounded-md flex items-center justify-center">
                           <Image className="h-12 w-12 text-muted-foreground" />
                         </div>
-                        <p className="text-sm text-muted-foreground">No media selected</p>
                         <Button variant="outline" size="sm" onClick={() => setMediaLibraryOpen(true)}>
                           <Upload className="mr-2 h-4 w-4" />Select from Media Library
                         </Button>
@@ -205,10 +186,9 @@ const AdDialog: React.FC<AdDialogProps> = ({
                     )}
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="perPlacementCreative" checked={formData.perPlacementCreative} onCheckedChange={(c) => handleCheckboxChange('perPlacementCreative', c === true)} />
-                  <Label htmlFor="perPlacementCreative">Enable different creatives per placement</Label>
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Internal notes…" rows={2} />
                 </div>
               </div>
             </TabsContent>
@@ -216,47 +196,24 @@ const AdDialog: React.FC<AdDialogProps> = ({
             <TabsContent value="tracking" className="space-y-4 mt-4">
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="destinationUrl">Website URL</Label>
-                  <Input id="destinationUrl" name="destinationUrl" value={formData.destinationUrl} onChange={handleInputChange} placeholder="https://yourdomain.com/landing-page" />
+                  <Label>Website URL</Label>
+                  <Input value={destinationUrl} onChange={e => setDestinationUrl(e.target.value)} placeholder="https://yourdomain.com/landing" />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="displayUrl">Display Link (Optional)</Label>
-                  <Input id="displayUrl" name="displayUrl" value={formData.displayUrl} onChange={handleInputChange} placeholder="yourdomain.com" />
+                  <Label>Display Link (Optional)</Label>
+                  <Input value={displayUrl} onChange={e => setDisplayUrl(e.target.value)} placeholder="yourdomain.com" />
                 </div>
-
                 <div className="space-y-2">
-                  <Label>UTM Parameters</Label>
+                  <Label>UTM Preview</Label>
                   <div className="p-3 bg-secondary/30 rounded-md border border-border">
-                    <p className="text-sm text-muted-foreground">
-                      {`${formData.destinationUrl}${formData.destinationUrl.includes('?') ? '&' : '?'}utm_source=meta&utm_medium=cpc&utm_campaign=${encodeURIComponent(formData.name || '')}`}
+                    <p className="text-sm text-muted-foreground break-all">
+                      {`${destinationUrl}${destinationUrl.includes('?') ? '&' : '?'}utm_source=meta&utm_medium=cpc&utm_campaign=${encodeURIComponent(name)}`}
                     </p>
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="trackingPixel">Pixel Tracking</Label>
-                  <Select value={formData.trackingPixel} onValueChange={(v) => handleSelectChange('trackingPixel', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select pixel" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      <SelectItem value="pixel_1">Meta Pixel (1234567890)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="conversionEvent">Conversion Event</Label>
-                  <Select value={formData.conversionEvent} onValueChange={(v) => handleSelectChange('conversionEvent', v)} disabled={!formData.trackingPixel}>
-                    <SelectTrigger><SelectValue placeholder="Select conversion event" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="purchase">Purchase</SelectItem>
-                      <SelectItem value="lead">Lead</SelectItem>
-                      <SelectItem value="complete_registration">Complete Registration</SelectItem>
-                      <SelectItem value="add_to_cart">Add to Cart</SelectItem>
-                      <SelectItem value="view_content">View Content</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Tracking Pixel</Label>
+                  <Input value={trackingPixel} onChange={e => setTrackingPixel(e.target.value)} placeholder="Pixel ID (optional)" />
                 </div>
               </div>
             </TabsContent>
@@ -264,7 +221,7 @@ const AdDialog: React.FC<AdDialogProps> = ({
 
           <DialogFooter className="flex justify-between mt-6">
             <div className="flex space-x-2">
-              {isEditing && (
+              {isEditing && onDelete && (
                 <Button variant="destructive" onClick={handleDelete}>
                   <Trash className="mr-2 h-4 w-4" />Delete
                 </Button>
