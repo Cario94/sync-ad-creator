@@ -275,7 +275,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         id: generateId(source.type),
         name: `${source.name} (copy)`,
         position: { x: source.position.x + 30, y: source.position.y + 30 },
-        config: source.config ? { ...source.config } : {},
+        config: source.config ? JSON.parse(JSON.stringify(source.config)) : {},
       };
 
       const updated = [...prev, newElement];
