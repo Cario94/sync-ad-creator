@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
-import type { Connection } from '@/hooks/useConnections';
 
 interface UseCanvasInteractionOptions {
   minScale?: number;
@@ -15,12 +14,6 @@ export interface SelectionRect {
   height: number;
 }
 
-/** A single snapshot of canvas state for undo/redo */
-export interface CanvasSnapshot {
-  elements: CanvasElement[];
-  connections: Connection[];
-}
-
 export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) => {
   const { minScale = 0.5, maxScale = 2 } = options;
   
@@ -31,10 +24,6 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePressed, setSpacePressed] = useState(false);
   const [clipboardItem, setClipboardItem] = useState<CanvasElement[] | null>(null);
-
-  // ── Undo/redo: stores full snapshots (elements + connections) ──
-  const historyRef = useRef<CanvasSnapshot[]>([]);
-  const historyIndexRef = useRef(-1);
   
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -125,33 +114,6 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     }
     return null;
   }, []);
-
-  /** Push a full snapshot to history. Trims forward history on new action. */
-  const addToHistory = useCallback((snapshot: CanvasSnapshot) => {
-    const idx = historyIndexRef.current;
-    historyRef.current = [...historyRef.current.slice(0, idx + 1), snapshot];
-    historyIndexRef.current = historyRef.current.length - 1;
-  }, []);
-
-  const handleUndo = useCallback((): CanvasSnapshot | null => {
-    if (historyIndexRef.current > 0) {
-      historyIndexRef.current -= 1;
-      toast.info('Undo');
-      return historyRef.current[historyIndexRef.current];
-    }
-    toast.info('Nothing to undo');
-    return null;
-  }, []);
-
-  const handleRedo = useCallback((): CanvasSnapshot | null => {
-    if (historyIndexRef.current < historyRef.current.length - 1) {
-      historyIndexRef.current += 1;
-      toast.info('Redo');
-      return historyRef.current[historyIndexRef.current];
-    }
-    toast.info('Nothing to redo');
-    return null;
-  }, []);
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -210,6 +172,5 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     handleMouseDown, handleMouseMove, handleMouseUp,
     setScale, setPan,
     handleCopy, handlePaste, handleDuplicate,
-    handleUndo, handleRedo, addToHistory
   };
 };
