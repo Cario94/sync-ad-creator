@@ -26,7 +26,7 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   }, [location]);
 
-  if (isWorkspace) return null;
+  if (isAppPage) return null;
 
   /** Scroll-to-section helper for hash links on the landing page */
   const scrollToSection = (hash: string) => {
