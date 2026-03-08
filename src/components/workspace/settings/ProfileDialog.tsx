@@ -1,12 +1,11 @@
-
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { PencilIcon } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -14,6 +13,15 @@ interface ProfileDialogProps {
 }
 
 const ProfileDialog: React.FC<ProfileDialogProps> = ({ open, onOpenChange }) => {
+  const { user } = useAuth();
+
+  const fullName = user?.user_metadata?.full_name || '';
+  const email = user?.email || '';
+  const nameParts = fullName.split(' ');
+  const initials = fullName
+    ? nameParts.map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : email ? email[0].toUpperCase() : 'U';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -22,22 +30,12 @@ const ProfileDialog: React.FC<ProfileDialogProps> = ({ open, onOpenChange }) => 
         </DialogHeader>
         <div className="space-y-6">
           <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <Button 
-                size="icon" 
-                variant="secondary" 
-                className="absolute bottom-0 right-0 rounded-full h-8 w-8"
-              >
-                <PencilIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            <Avatar className="h-24 w-24">
+              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+            </Avatar>
             <div className="text-center">
-              <h3 className="font-medium text-lg">John Doe</h3>
-              <p className="text-muted-foreground text-sm">john@example.com</p>
+              <h3 className="font-medium text-lg">{fullName || 'User'}</h3>
+              <p className="text-muted-foreground text-sm">{email}</p>
             </div>
           </div>
 
@@ -47,29 +45,31 @@ const ProfileDialog: React.FC<ProfileDialogProps> = ({ open, onOpenChange }) => 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" defaultValue="John" />
+                <Input id="firstName" defaultValue={nameParts[0] || ''} placeholder="First name" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" defaultValue="Doe" />
+                <Input id="lastName" defaultValue={nameParts.slice(1).join(' ') || ''} placeholder="Last name" />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="john@example.com" />
+              <Input id="email" type="email" defaultValue={email} disabled />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
-              <Input id="company" defaultValue="Acme Inc." />
+              <Input id="company" placeholder="Your company" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Input id="role" defaultValue="Marketing Manager" />
+              <Input id="role" placeholder="Your role" />
             </div>
           </div>
+
+          <Separator />
 
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>

@@ -115,8 +115,8 @@ const MediaLibrary = () => {
               <User className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <div className="font-medium">John Doe</div>
-              <div className="text-xs text-muted-foreground">john@example.com</div>
+              <div className="font-medium">User</div>
+              <div className="text-xs text-muted-foreground"></div>
             </div>
           </div>
           <Button 
