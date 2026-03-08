@@ -23,11 +23,7 @@ interface CanvasRef {
 
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({ className = '', onUndo, onRedo, onTidyLayout }, ref) => {
   // State for canvas elements
-  const [elements, setElements] = useState<CanvasElement[]>([
-    { id: 'campaign-1', type: 'campaign', name: 'Summer Sale 2023', position: { x: 100, y: 100 } },
-    { id: 'adset-1', type: 'adset', name: 'Women 25-34', position: { x: 400, y: 200 } },
-    { id: 'ad-1', type: 'ad', name: 'Product Showcase', position: { x: 700, y: 300 } },
-  ]);
+  const [elements, setElements] = useState<CanvasElement[]>([]);
   
   // Use the custom hook for all canvas interactions
   const {
