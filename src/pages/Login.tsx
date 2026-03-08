@@ -53,6 +53,26 @@ const Login = () => {
   const handleMetaLogin = () => {
     toast('Meta login integration coming soon');
   };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error('Please enter your email first');
+      return;
+    }
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Verification email resent! Check your inbox.');
+      }
+    } catch {
+      toast.error('Failed to resend. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
