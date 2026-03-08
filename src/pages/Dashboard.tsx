@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { projectsService } from '@/services/projects';
+import { activityLogsService } from '@/services/activityLogs';
 import type { Project } from '@/types/database';
 import { formatDistanceToNow, format } from 'date-fns';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
