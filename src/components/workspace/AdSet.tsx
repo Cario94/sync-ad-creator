@@ -47,6 +47,9 @@ const AdSet: React.FC<AdSetProps> = ({
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateAdSetConfig(config);
+  const validation = useNodeValidation(id);
+  const errCount = validation?.issues.filter(i => i.severity === 'error').length ?? 0;
+  const warnCount = validation?.issues.filter(i => i.severity === 'warning').length ?? 0;
 
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
