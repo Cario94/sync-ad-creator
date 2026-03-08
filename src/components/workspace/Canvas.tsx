@@ -3,7 +3,7 @@ import CanvasContextMenu from './CanvasContextMenu';
 import ZoomControls from './ZoomControls';
 import CanvasElements from './CanvasElements';
 import { CanvasElement } from './types/canvas';
-import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
+import { useCanvasInteraction, screenToWorld } from '@/hooks/useCanvasInteraction';
 import { useConnections, Connection } from '@/hooks/useConnections';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -22,8 +22,18 @@ export interface CanvasRef {
   getViewport: () => { x: number; y: number; zoom: number };
 }
 
+const GRID_SIZE = 25;
+const SNAP_SIZE = 25; // snap-to-grid increment
+
 const generateId = (type: string) =>
   `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+// Node sizes for selection/connection calculations (world coords)
+const NODE_SIZES: Record<string, { w: number; h: number }> = {
+  campaign: { w: 288, h: 140 },
+  adset: { w: 264, h: 130 },
+  ad: { w: 240, h: 120 },
+};
 
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   className = '',
@@ -37,11 +47,13 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   } = useWorkspace();
 
   const {
-    canvasRef, scale, isDragging, pan, spacePressed,
+    containerRef, viewport, setViewport,
+    scale, isDragging, pan, spacePressed,
     selectionRect, isSelecting,
     handleZoomIn, handleZoomOut,
-    handleMouseDown, handleMouseMove, handleMouseUp,
-    setScale, setPan,
+    handleMouseDown: canvasMouseDown,
+    handleMouseMove: canvasMouseMove,
+    handleMouseUp: canvasMouseUp,
     handleCopy, handlePaste, handleDuplicate,
   } = useCanvasInteraction();
 
@@ -64,28 +76,42 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   const [pendingAffected, setPendingAffected] = useState<CanvasElement[]>([]);
   const [pendingDirectTargets, setPendingDirectTargets] = useState<CanvasElement[]>([]);
 
-  // Hydrate viewport
+  // Hydrate viewport from saved state
   useEffect(() => {
     const vp = viewportRef.current;
-    setPan({ x: vp.x, y: vp.y });
-    setScale(vp.zoom);
+    setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sync viewport back to workspace context
   useEffect(() => {
     viewportRef.current = { x: pan.x, y: pan.y, zoom: scale };
   }, [pan, scale, viewportRef]);
 
+  // Track mouse position in world coordinates for connection line preview
+  const [worldMousePos, setWorldMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    canvasMouseMove(e);
+    // Update world mouse position for in-progress connections
+    if (isCreatingConnection && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setWorldMousePos(screenToWorld(e.clientX, e.clientY, rect, viewport));
+    }
+  }, [canvasMouseMove, isCreatingConnection, containerRef, viewport]);
+
   const selectedElements = elements.filter(el => selectedElementIds.includes(el.id));
   const [showMultiSettings, setShowMultiSettings] = useState(false);
 
-  const updateElementPosition = (id: string, position: { x: number; y: number }) => {
+  const updateElementPosition = useCallback((id: string, position: { x: number; y: number }) => {
     setElements(prev => prev.map(el => el.id === id ? { ...el, position } : el));
-  };
+  }, [setElements]);
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget || (e.target as HTMLElement).dataset?.canvasBackground === 'true') {
       setSelectedElementIds([]);
       setShowMultiSettings(false);
+      if (isCreatingConnection) cancelConnection();
     }
   };
 
@@ -94,12 +120,11 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     if (!isSelecting && selectionRect && selectionRect.width > 5 && selectionRect.height > 5) {
       const selectedIds = elements.filter(element => {
         const { x, y } = element.position;
-        const elementWidth = 256;
-        const elementHeight = element.type === 'campaign' ? 140 : element.type === 'adset' ? 130 : 120;
+        const size = NODE_SIZES[element.type] || { w: 256, h: 120 };
         return !(
-          x + elementWidth < selectionRect.startX ||
+          x + size.w < selectionRect.startX ||
           x > selectionRect.startX + selectionRect.width ||
-          y + elementHeight < selectionRect.startY ||
+          y + size.h < selectionRect.startY ||
           y > selectionRect.startY + selectionRect.height
         );
       }).map(el => el.id);
@@ -246,8 +271,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     const adsets = elements.filter(el => el.type === 'adset');
     const ads = elements.filter(el => el.type === 'ad');
 
-    const startX = 100, startY = 100, horizontalSpacing = 350, verticalSpacing = 150;
-    const newElements = [...elements];
+    const startX = 100, startY = 100, horizontalSpacing = 350, verticalSpacing = 175;
+    const newElements = elements.map(el => ({ ...el }));
 
     campaigns.forEach((campaign, index) => {
       const element = newElements.find(el => el.id === campaign.id);
@@ -272,7 +297,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     getViewport: () => viewportRef.current,
   }), [tidyLayout, viewportRef]);
 
-  // Keyboard shortcuts (respects user preference)
+  // Keyboard shortcuts
   const { preferences: userPrefs } = useUserSettings();
   const kbShortcutsEnabled = userPrefs.keyboardShortcuts !== false;
 
@@ -282,11 +307,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
-        if (e.shiftKey) {
-          redo();
-        } else {
-          undo();
-        }
+        if (e.shiftKey) redo(); else undo();
         return;
       }
 
@@ -327,6 +348,11 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [kbShortcutsEnabled, elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, undo, redo, pushSnapshot, handleDeleteMultiple, markDirty, setElements, setSelectedElementIds]);
 
+  // Handle drag end: mark dirty + snapshot
+  const handleNodeDragEnd = useCallback(() => {
+    markDirty();
+  }, [markDirty]);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <ZoomControls scale={scale} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
@@ -352,63 +378,82 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       />
 
       <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
+        {/* OUTER container: un-transformed, captures all mouse events */}
         <div
-          ref={canvasRef}
-          className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative`}
-          onMouseDown={handleMouseDown}
+          ref={containerRef}
+          className={`w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative overflow-hidden`}
+          onMouseDown={canvasMouseDown}
           onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseUp={canvasMouseUp}
+          onMouseLeave={canvasMouseUp}
           onClick={handleCanvasClick}
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-            transformOrigin: '0 0',
-            transition: isDragging || isSelecting ? 'none' : 'transform 0.05s ease-out',
-            willChange: 'transform',
-          }}
         >
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 0, minWidth: '200%', minHeight: '200%', left: '-50%', top: '-50%' }}
+          {/* INNER layer: CSS transform for pan+zoom rendering */}
+          <div
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+              transformOrigin: '0 0',
+              willChange: 'transform',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              // Large enough virtual canvas
+              width: '10000px',
+              height: '10000px',
+            }}
           >
-            <defs>
-              <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
-                <path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(0, 0, 0, 0.05)" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
+            {/* Grid */}
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              width="100%"
+              height="100%"
+              data-canvas-background="true"
+            >
+              <defs>
+                <pattern id="grid" width={GRID_SIZE} height={GRID_SIZE} patternUnits="userSpaceOnUse">
+                  <path d={`M ${GRID_SIZE} 0 L 0 0 0 ${GRID_SIZE}`} fill="none" stroke="hsl(var(--border) / 0.3)" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
 
-          {isSelecting && selectionRect && (
-            <div
-              className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-50"
-              style={{
-                left: `${selectionRect.startX}px`,
-                top: `${selectionRect.startY}px`,
-                width: `${selectionRect.width}px`,
-                height: `${selectionRect.height}px`,
-              }}
+            {/* Selection rectangle (in world coordinates) */}
+            {isSelecting && selectionRect && (
+              <div
+                className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-50"
+                style={{
+                  left: `${selectionRect.startX}px`,
+                  top: `${selectionRect.startY}px`,
+                  width: `${selectionRect.width}px`,
+                  height: `${selectionRect.height}px`,
+                }}
+              />
+            )}
+
+            <CanvasElements
+              elements={elements}
+              connections={connections}
+              isCreatingConnection={isCreatingConnection}
+              activeConnection={activeConnection}
+              selectedElementIds={selectedElementIds}
+              onSelectElement={handleSelectElement}
+              onStartConnection={startConnection}
+              onCompleteConnection={completeConnection}
+              onCancelConnection={cancelConnection}
+              onRemoveConnection={removeConnection}
+              onUpdatePosition={updateElementPosition}
+              onEditElement={handleEditElement}
+              onDeleteElement={handleDeleteElement}
+              onDuplicateElement={handleDuplicateElement}
+              getCampaigns={getCampaigns}
+              getAdSets={getAdSets}
+              viewport={viewport}
+              containerRef={containerRef}
+              snapSize={SNAP_SIZE}
+              worldMousePos={worldMousePos}
+              onDragEnd={handleNodeDragEnd}
             />
-          )}
-
-          <CanvasElements
-            elements={elements}
-            connections={connections}
-            isCreatingConnection={isCreatingConnection}
-            activeConnection={activeConnection}
-            selectedElementIds={selectedElementIds}
-            onSelectElement={handleSelectElement}
-            onStartConnection={startConnection}
-            onCompleteConnection={completeConnection}
-            onCancelConnection={cancelConnection}
-            onRemoveConnection={removeConnection}
-            onUpdatePosition={updateElementPosition}
-            onEditElement={handleEditElement}
-            onDeleteElement={handleDeleteElement}
-            onDuplicateElement={handleDuplicateElement}
-            getCampaigns={getCampaigns}
-            getAdSets={getAdSets}
-          />
+          </div>
         </div>
       </CanvasContextMenu>
     </div>
