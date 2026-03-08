@@ -12,6 +12,8 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Workspace from "./pages/Workspace";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,23 +26,22 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Public routes */}
+            {/* Public marketing pages */}
             <Route path="/" element={<Index />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+
+            {/* Auth routes — redirect to workspace if already logged in */}
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
             <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
             <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            {/* Protected routes */}
-            <Route path="/workspace" element={
-              <ProtectedRoute>
-                <Workspace />
-              </ProtectedRoute>
-            } />
-            <Route path="/workspace/:projectId" element={
-              <ProtectedRoute>
-                <Workspace />
-              </ProtectedRoute>
-            } />
+
+            {/* Authenticated app routes */}
+            <Route path="/workspace" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
+            <Route path="/workspace/:projectId" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
+
+            {/* Fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

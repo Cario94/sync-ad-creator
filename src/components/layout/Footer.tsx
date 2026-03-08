@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <footer className="bg-secondary/50 py-12 px-6 md:px-12">
       <div className="max-w-7xl mx-auto">
@@ -17,80 +16,63 @@ const Footer: React.FC = () => {
               Streamlining Meta ad campaign creation and management with a visual, AI-powered platform.
             </p>
           </div>
-          
+
           <div>
             <h3 className="font-medium text-lg mb-4">Product</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/features" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/#features" className="text-muted-foreground hover:text-primary transition-colors">
                   Features
                 </Link>
               </li>
               <li>
-                <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/#pricing" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing
-                </Link>
-              </li>
-              <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Roadmap
                 </Link>
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-medium text-lg mb-4">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Documentation
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">Documentation</span>
               </li>
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Guides
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">Guides</span>
               </li>
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Support
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">Support</span>
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-medium text-lg mb-4">Company</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  About
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">About</span>
               </li>
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Blog
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">Blog</span>
               </li>
               <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contact
-                </Link>
+                <span className="text-muted-foreground/50 cursor-default">Contact</span>
               </li>
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-muted-foreground text-sm">
             &copy; {currentYear} CampaignSync. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link to="/" className="text-muted-foreground hover:text-primary transition-colors text-sm">
+            <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors text-sm">
               Privacy Policy
             </Link>
-            <Link to="/" className="text-muted-foreground hover:text-primary transition-colors text-sm">
+            <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors text-sm">
               Terms of Service
             </Link>
           </div>

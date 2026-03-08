@@ -156,6 +156,16 @@ const Index = () => {
     };
   }, []);
 
+  // Handle hash-based scrolling (e.g. /#features, /#pricing)
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -196,7 +206,7 @@ const Index = () => {
       </section>
       
       {/* Features Section */}
-      <section className="py-20 px-6 md:px-12 bg-secondary/30">
+      <section id="features" className="py-20 px-6 md:px-12 bg-secondary/30">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal-animation">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -263,7 +273,7 @@ const Index = () => {
       </section>
       
       {/* Pricing Section */}
-      <section className="py-20 px-6 md:px-12 bg-secondary/30">
+      <section id="pricing" className="py-20 px-6 md:px-12 bg-secondary/30">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal-animation">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
