@@ -104,8 +104,10 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
       return;
     }
 
-    // Click on empty canvas = start selection rectangle
-    if (e.target === e.currentTarget || (e.target as HTMLElement).dataset?.canvasBackground === 'true') {
+    // Left-click on empty canvas = start selection rectangle.
+    // Node mousedown handlers call stopPropagation, so any mousedown
+    // that reaches this handler is guaranteed to be on empty canvas.
+    if (e.button === 0) {
       const rect = container.getBoundingClientRect();
       const world = screenToWorld(e.clientX, e.clientY, rect, viewportRef.current);
       selectionStartRef.current = world;

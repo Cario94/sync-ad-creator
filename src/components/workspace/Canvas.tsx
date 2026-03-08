@@ -111,7 +111,9 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   }, [setElements]);
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget || (e.target as HTMLElement).dataset?.canvasBackground === 'true') {
+    // Node click handlers call stopPropagation, so any click reaching
+    // here is on empty canvas — no fragile target check needed.
+    if (e.target === e.currentTarget || !(e.target as HTMLElement).closest?.('[data-node-element]')) {
       setSelectedElementIds([]);
       setShowMultiSettings(false);
       if (isCreatingConnection) cancelConnection();
