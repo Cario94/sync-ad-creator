@@ -238,7 +238,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
                 confirmDelete();
               }}
               disabled={isDeleting}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
