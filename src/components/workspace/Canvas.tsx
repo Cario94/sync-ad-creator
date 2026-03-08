@@ -464,4 +464,3 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
 Canvas.displayName = 'Canvas';
 
 export default Canvas;
-export type { CanvasRef };
