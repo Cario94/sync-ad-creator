@@ -19,6 +19,7 @@ import { MediaItem } from '@/hooks/useMediaLibrary';
 import SettingsDialog from '@/components/workspace/settings/SettingsDialog';
 import ProfileDialog from '@/components/workspace/settings/ProfileDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Workspace = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,13 +31,15 @@ const Workspace = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<CanvasRef>(null);
+  const { user, signOut } = useAuth();
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out."
     });
-    navigate('/');
+    navigate('/login');
   };
 
   const handleMediaSelect = (media: MediaItem) => {
@@ -102,8 +105,8 @@ const Workspace = () => {
               <User className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <div className="font-medium">John Doe</div>
-              <div className="text-xs text-muted-foreground">john@example.com</div>
+              <div className="font-medium">{user?.user_metadata?.full_name || 'User'}</div>
+              <div className="text-xs text-muted-foreground">{user?.email || ''}</div>
             </div>
           </div>
           <Button 

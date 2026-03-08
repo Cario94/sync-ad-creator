@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Facebook } from 'lucide-react';
 import AnimatedGradient from '@/components/ui/AnimatedGradient';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Register = () => {
   const [fullName, setFullName] = useState('');
@@ -38,14 +38,23 @@ const Register = () => {
     
     setIsLoading(true);
     
-    // Simulate registration process for now
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: window.location.origin,
+        },
+      });
       
-      // For demo, we'll just navigate to workspace
-      toast.success('Account created successfully!');
-      navigate('/workspace');
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      
+      toast.success('Account created! Check your email to confirm your account.');
+      navigate('/login');
     } catch (error) {
       toast.error('Registration failed. Please try again.');
     } finally {
