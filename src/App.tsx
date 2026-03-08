@@ -41,6 +41,7 @@ const App = () => (
 
             {/* Authenticated app routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/workspace" element={<Navigate to="/dashboard" replace />} />
             <Route path="/workspace/:projectId" element={<ProtectedRoute><Workspace /></ProtectedRoute>} />
 
             {/* Fallback */}
