@@ -14,6 +14,11 @@ interface ElementsRendererProps {
   onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onCompleteConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
   onUpdatePosition: (id: string, position: { x: number; y: number }) => void;
+  onEditElement: (id: string, updates: Partial<CanvasElement>) => void;
+  onDeleteElement: (id: string) => void;
+  onDuplicateElement: (id: string) => void;
+  getCampaigns: () => { id: string; name: string }[];
+  getAdSets: () => { id: string; name: string }[];
   elementRefs: (id: string, element: HTMLDivElement | null) => void;
 }
 
@@ -26,6 +31,11 @@ const ElementsRenderer: React.FC<ElementsRendererProps> = ({
   onStartConnection,
   onCompleteConnection,
   onUpdatePosition,
+  onEditElement,
+  onDeleteElement,
+  onDuplicateElement,
+  getCampaigns,
+  getAdSets,
   elementRefs
 }) => {
   return (
@@ -36,6 +46,7 @@ const ElementsRenderer: React.FC<ElementsRendererProps> = ({
         const commonProps = {
           id: element.id,
           name: element.name,
+          config: element.config,
           initialPosition: element.position,
           elementRef: (el: HTMLDivElement | null) => elementRefs(element.id, el),
           isCreatingConnection,
@@ -45,14 +56,17 @@ const ElementsRenderer: React.FC<ElementsRendererProps> = ({
           onStartConnection: () => onStartConnection(element.id, element.type),
           onCompleteConnection: () => onCompleteConnection(element.id, element.type),
           onUpdatePosition: (position: { x: number; y: number }) => onUpdatePosition(element.id, position),
+          onEdit: (updates: Partial<CanvasElement>) => onEditElement(element.id, updates),
+          onDelete: () => onDeleteElement(element.id),
+          onDuplicate: () => onDuplicateElement(element.id),
         };
         
         if (element.type === 'campaign') {
           return <Campaign key={element.id} {...commonProps} />;
         } else if (element.type === 'adset') {
-          return <AdSet key={element.id} {...commonProps} />;
+          return <AdSet key={element.id} {...commonProps} campaigns={getCampaigns()} />;
         } else if (element.type === 'ad') {
-          return <Ad key={element.id} {...commonProps} />;
+          return <Ad key={element.id} {...commonProps} adSets={getAdSets()} />;
         }
         return null;
       })}

@@ -4,9 +4,11 @@ import { Users, Link } from 'lucide-react';
 import AdSetDialog from './dialogs/AdSetDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
+import { CanvasElement } from './types/canvas';
 
 interface AdSetProps {
   name: string;
+  config?: Record<string, unknown>;
   initialPosition?: { x: number; y: number };
   id?: string;
   isSelected?: boolean;
@@ -17,10 +19,15 @@ interface AdSetProps {
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
   onUpdatePosition?: (position: { x: number; y: number }) => void;
+  onEdit?: (updates: Partial<CanvasElement>) => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
+  campaigns?: { id: string; name: string }[];
 }
 
 const AdSet: React.FC<AdSetProps> = ({ 
   name, 
+  config = {},
   initialPosition = { x: 0, y: 0 },
   id = `adset-${Date.now()}`,
   isSelected = false,
@@ -31,35 +38,38 @@ const AdSet: React.FC<AdSetProps> = ({
   onStartConnection,
   onCompleteConnection,
   onUpdatePosition,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  campaigns = [],
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [adSetData, setAdSetData] = useState({
+
+  const adSetData = {
     id,
     name,
-    campaignId: '',
-    budgetType: 'campaign',
-    budget: 20,
-    startDate: new Date(),
-    ageMin: 18,
-    ageMax: 65,
-    gender: 'all',
-    locations: ['United States'],
-    placements: [],
-    bidStrategy: 'lowest_cost',
-    optimizationGoal: 'clicks'
-  });
+    campaignId: (config.campaignId as string) || '',
+    budgetType: (config.budgetType as string) || 'campaign',
+    budget: (config.budget as number) || 20,
+    startDate: config.startDate ? new Date(config.startDate as string) : new Date(),
+    ageMin: (config.ageMin as number) || 18,
+    ageMax: (config.ageMax as number) || 65,
+    gender: (config.gender as string) || 'all',
+    locations: (config.locations as string[]) || ['United States'],
+    placements: (config.placements as string[]) || [],
+    bidStrategy: (config.bidStrategy as string) || 'lowest_cost',
+    optimizationGoal: (config.optimizationGoal as string) || 'clicks',
+  };
 
   const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
   });
 
-  // Sync external selection state
   useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
 
-  // Sync position with parent component when dragging
   useEffect(() => {
     if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
       onUpdatePosition(position);
@@ -72,19 +82,18 @@ const AdSet: React.FC<AdSetProps> = ({
     setDialogOpen(true);
   };
 
-  const handleSave = (updatedAdSet: any) => {
-    setAdSetData(updatedAdSet);
+  const handleSave = (updated: any) => {
+    const { id: _id, name: newName, ...rest } = updated;
+    onEdit?.({ name: newName, config: rest });
   };
 
   const handleDelete = () => {
-    // In a real implementation, this would remove the ad set from the canvas
-    console.log(`Delete ad set: ${adSetData.id}`);
+    onDelete?.();
   };
 
   const isActiveConnection = activeConnectionId === id;
   const isConnectionTarget = isCreatingConnection && !isActiveConnection;
 
-  // Handle connection operations
   const handleConnectionStart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onStartConnection) onStartConnection();
@@ -95,12 +104,9 @@ const AdSet: React.FC<AdSetProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
     dragRef(el);
-    if (elementRef) {
-      elementRef(el);
-    }
+    if (elementRef) elementRef(el);
   };
 
   return (
@@ -108,6 +114,8 @@ const AdSet: React.FC<AdSetProps> = ({
       <CanvasContextMenu 
         onEdit={() => setDialogOpen(true)} 
         onConnect={onStartConnection}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
         elementType="adset"
       >
         <div
@@ -143,12 +151,11 @@ const AdSet: React.FC<AdSetProps> = ({
             </div>
             <div className="font-semibold text-sm uppercase tracking-wide text-accent-foreground">Ad Set</div>
           </div>
-          <h3 className="font-bold text-base mb-1">{adSetData.name}</h3>
+          <h3 className="font-bold text-base mb-1">{name}</h3>
           <div className="mt-2 text-xs text-muted-foreground">
             Budget: ${adSetData.budget}/day • Locations: {adSetData.locations.join(', ')}
           </div>
           
-          {/* Connection button */}
           <button
             className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}
@@ -165,9 +172,7 @@ const AdSet: React.FC<AdSetProps> = ({
         adSet={adSetData}
         onSave={handleSave}
         onDelete={handleDelete}
-        campaigns={[
-          { id: 'campaign-1', name: 'Summer Sale 2023' }
-        ]}
+        campaigns={campaigns}
       />
     </>
   );
