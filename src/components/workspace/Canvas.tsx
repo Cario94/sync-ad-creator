@@ -11,16 +11,15 @@ import MultiSelectSettings from './MultiSelectSettings';
 
 interface CanvasProps {
   className?: string;
-  /** Initial elements loaded from DB */
   initialElements?: CanvasElement[];
-  /** Initial connections loaded from DB */
   initialConnections?: Connection[];
-  /** Initial viewport from DB */
   initialViewport?: { x: number; y: number; zoom: number };
-  /** Called whenever elements change */
   onElementsChange?: (elements: CanvasElement[]) => void;
-  /** Called whenever connections change */
   onConnectionsChange?: (connections: Connection[]) => void;
+  onAddCampaign?: () => void;
+  onAddAdSet?: () => void;
+  onAddAd?: () => void;
+  onSave?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onTidyLayout?: () => void;
@@ -32,6 +31,7 @@ interface CanvasRef {
   getElements: () => CanvasElement[];
   getConnections: () => Connection[];
   getViewport: () => { x: number; y: number; zoom: number };
+  addElement: (element: CanvasElement) => void;
 }
 
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
@@ -41,6 +41,10 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   initialViewport,
   onElementsChange,
   onConnectionsChange,
+  onAddCampaign,
+  onAddAdSet,
+  onAddAd,
+  onSave,
   onUndo,
   onRedo,
   onTidyLayout
@@ -233,13 +237,24 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success('Layout organized successfully');
   };
 
+  // Add element programmatically
+  const addElement = useCallback((element: CanvasElement) => {
+    setElements(prev => {
+      const updated = [...prev, element];
+      addToHistory(updated);
+      return updated;
+    });
+    setSelectedElementIds([element.id]);
+  }, [addToHistory]);
+
   // Expose methods via ref — must include all deps to avoid stale closures
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
     getElements: () => elements,
     getConnections: () => connections,
     getViewport: () => ({ x: pan.x, y: pan.y, zoom: scale }),
-  }), [elements, connections, pan, scale, tidyLayout]);
+    addElement,
+  }), [elements, connections, pan, scale, tidyLayout, addElement]);
   
   // Keyboard shortcuts
   useEffect(() => {
@@ -309,7 +324,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         />
       )}
       
-      <CanvasContextMenu elementType="">
+      <CanvasContextMenu elementType="" onAddCampaign={onAddCampaign} onAddAdSet={onAddAdSet} onAddAd={onAddAd} onSave={onSave}>
         <div 
           ref={canvasRef}
           className={`workspace-canvas w-full h-full ${className} ${spacePressed ? 'cursor-grab' : 'cursor-default'} ${isDragging && spacePressed ? 'cursor-grabbing' : ''} relative`}
