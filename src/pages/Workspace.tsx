@@ -54,6 +54,13 @@ function SaveStatusIndicator({ status }: { status: SaveStatus }) {
           Save failed
         </span>
       );
+    case 'conflict':
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3" />
+          Version conflict
+        </span>
+      );
     default:
       return null;
   }
@@ -199,7 +206,7 @@ function WorkspaceInner() {
               variant={saveStatus === 'unsaved' ? 'default' : 'outline'}
               size="sm"
               onClick={handleSave}
-              disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved'}
+              disabled={saveStatus === 'saving' || saveStatus === 'idle' || saveStatus === 'saved' || saveStatus === 'conflict'}
             >
               {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save
