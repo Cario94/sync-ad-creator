@@ -324,6 +324,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <ZoomControls scale={scale} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
+      <ValidationPanel />
 
       {showMultiSettings && selectedElementIds.length > 1 && (
         <MultiSelectSettings
