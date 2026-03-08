@@ -348,8 +348,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [kbShortcutsEnabled, elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, undo, redo, pushSnapshot, handleDeleteMultiple, markDirty, setElements, setSelectedElementIds]);
 
-  // Handle drag end: mark dirty + snapshot
-  const handleNodeDragEnd = useCallback(() => {
+  // Handle drag end: push snapshot for undo + mark dirty
+  const handleNodeDragEnd = useCallback((_id: string, _pos: { x: number; y: number }) => {
     markDirty();
   }, [markDirty]);
 
