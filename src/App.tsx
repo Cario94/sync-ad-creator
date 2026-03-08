@@ -28,6 +28,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+        <UserSettingsProvider>
           <Routes>
             {/* Public marketing pages */}
             <Route path="/" element={<Index />} />
