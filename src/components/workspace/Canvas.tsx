@@ -41,6 +41,10 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   initialViewport,
   onElementsChange,
   onConnectionsChange,
+  onAddCampaign,
+  onAddAdSet,
+  onAddAd,
+  onSave,
   onUndo,
   onRedo,
   onTidyLayout
