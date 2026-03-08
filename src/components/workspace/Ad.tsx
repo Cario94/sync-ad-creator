@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateAdConfig } from './types/canvas';
 import NodeValidationBadge from './NodeValidationBadge';
 import { useNodeValidation } from '@/hooks/useNodeValidation';
+import type { Viewport } from '@/hooks/useCanvasInteraction';
 
 interface AdProps {
   name: string;
@@ -24,10 +25,14 @@ interface AdProps {
   onDelete?: () => void;
   onDuplicate?: () => void;
   adSets?: { id: string; name: string }[];
+  viewport?: Viewport;
+  containerRef?: React.RefObject<HTMLDivElement>;
+  snapSize?: number;
+  onDragEnd?: () => void;
 }
 
-const Ad: React.FC<AdProps> = ({ 
-  name, 
+const Ad: React.FC<AdProps> = ({
+  name,
   config = {},
   initialPosition = { x: 0, y: 0 },
   id = `ad-${Date.now()}`,
@@ -42,6 +47,10 @@ const Ad: React.FC<AdProps> = ({
   onDelete,
   onDuplicate,
   adSets = [],
+  viewport,
+  containerRef,
+  snapSize = 0,
+  onDragEnd: onDragEndProp,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateAdConfig(config);
@@ -52,6 +61,11 @@ const Ad: React.FC<AdProps> = ({
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
+    viewport: viewport ?? { x: 0, y: 0, zoom: 1 },
+    containerRef,
+    snapSize,
+    nodeId: id,
+    onDragEnd: onDragEndProp,
   });
 
   useEffect(() => { setIsSelected(isSelected); }, [isSelected, setIsSelected]);
@@ -97,19 +111,19 @@ const Ad: React.FC<AdProps> = ({
         <div
           ref={combinedRef}
           className={cn(
-            "absolute p-3.5 w-60 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab relative",
+            "absolute p-3.5 rounded-lg glass-dark shadow-sm border border-muted-foreground/30 cursor-grab relative",
             isDragging ? "cursor-grabbing shadow-md opacity-90 z-50" : "z-10",
             isSelected ? "ring-2 ring-primary shadow-md z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            transition: isDragging ? 'none' : 'box-shadow 0.15s, transform 0.15s',
             minHeight: '120px',
-            width: '240px'
+            width: '240px',
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) handleConnectionComplete(e);
@@ -126,13 +140,13 @@ const Ad: React.FC<AdProps> = ({
             <div className="font-medium text-xs uppercase tracking-wide text-muted-foreground">Ad</div>
           </div>
           <h3 className="font-semibold text-sm mb-1">{name}</h3>
-          
+
           {typed.imageUrl && (
             <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">
               <img src={typed.imageUrl} alt={name} className="w-full h-full object-cover" />
             </div>
           )}
-          
+
           <div className="mt-2 text-xs text-muted-foreground">
             {typed.headline ? typed.headline : 'No headline'} • {typed.callToAction.replace(/_/g, ' ')}
           </div>

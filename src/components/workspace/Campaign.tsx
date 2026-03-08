@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateCampaignConfig } from './types/canvas';
 import NodeValidationBadge from './NodeValidationBadge';
 import { useNodeValidation } from '@/hooks/useNodeValidation';
+import type { Viewport } from '@/hooks/useCanvasInteraction';
 
 interface CampaignProps {
   name: string;
@@ -24,10 +25,14 @@ interface CampaignProps {
   onEdit?: (updates: Partial<CanvasElement>) => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  viewport?: Viewport;
+  containerRef?: React.RefObject<HTMLDivElement>;
+  snapSize?: number;
+  onDragEnd?: () => void;
 }
 
-const Campaign: React.FC<CampaignProps> = ({ 
-  name, 
+const Campaign: React.FC<CampaignProps> = ({
+  name,
   config = {},
   initialPosition = { x: 0, y: 0 },
   id = `campaign-${Date.now()}`,
@@ -42,6 +47,10 @@ const Campaign: React.FC<CampaignProps> = ({
   onEdit,
   onDelete,
   onDuplicate,
+  viewport,
+  containerRef,
+  snapSize = 0,
+  onDragEnd: onDragEndProp,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const typed = hydrateCampaignConfig(config);
@@ -52,6 +61,11 @@ const Campaign: React.FC<CampaignProps> = ({
   const { position, isDragging, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
+    viewport: viewport ?? { x: 0, y: 0, zoom: 1 },
+    containerRef,
+    snapSize,
+    nodeId: id,
+    onDragEnd: onDragEndProp,
   });
 
   useEffect(() => { setIsSelected(isSelected); }, [isSelected, setIsSelected]);
@@ -93,8 +107,8 @@ const Campaign: React.FC<CampaignProps> = ({
 
   return (
     <>
-      <CanvasContextMenu 
-        onEdit={() => setDialogOpen(true)} 
+      <CanvasContextMenu
+        onEdit={() => setDialogOpen(true)}
         onConnect={onStartConnection}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
@@ -108,13 +122,13 @@ const Campaign: React.FC<CampaignProps> = ({
             isSelected ? "ring-2 ring-primary shadow-xl z-20" : "",
             isActiveConnection ? "ring-2 ring-primary" : "",
             isConnectionTarget ? "ring-2 ring-primary/50 cursor-cell" : "",
-            "transition-all duration-150"
           )}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-            minHeight: '140px'
+            transition: isDragging ? 'none' : 'box-shadow 0.15s, transform 0.15s',
+            minHeight: '140px',
           }}
           onMouseDown={(e) => {
             if (isCreatingConnection) handleConnectionComplete(e);
@@ -134,9 +148,9 @@ const Campaign: React.FC<CampaignProps> = ({
           <div className="mt-2 text-xs text-muted-foreground font-medium">
             Objective: {typed.objective.charAt(0).toUpperCase() + typed.objective.slice(1)} • {typed.status}
           </div>
-          
+
           <button
-            className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
+            className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}
             title="Connect to Ad Set"
           >
