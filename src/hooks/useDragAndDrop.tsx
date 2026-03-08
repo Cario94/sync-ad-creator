@@ -18,8 +18,8 @@ interface UseDragAndDropProps {
   onDragMove?: (id: string, pos: Position) => Position;
   /** Node id for alignment callbacks */
   nodeId?: string;
-  /** Called when drag ends */
-  onDragEnd?: () => void;
+  /** Called when drag ends with final position */
+  onDragEnd?: (id: string, pos: Position) => void;
 }
 
 interface UseDragAndDropResult {
@@ -52,6 +52,11 @@ const useDragAndDrop = ({
   const [isSelected, setIsSelected] = useState(false);
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const movedRef = useRef(false);
+
+  // Keep position in a ref so handleMouseDown always captures current value
+  const positionRef = useRef(position);
+  positionRef.current = position;
+
   const dragDataRef = useRef({
     startScreenX: 0,
     startScreenY: 0,
@@ -59,9 +64,20 @@ const useDragAndDrop = ({
     startWorldY: 0,
     started: false,
   });
+
   // Keep latest viewport in a ref so mousemove doesn't go stale
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
+
+  // Keep callbacks in refs to avoid re-subscribing listeners
+  const onDragMoveRef = useRef(onDragMove);
+  onDragMoveRef.current = onDragMove;
+  const onDragEndRef = useRef(onDragEnd);
+  onDragEndRef.current = onDragEnd;
+  const snapSizeRef = useRef(snapSize);
+  snapSizeRef.current = snapSize;
+  const nodeIdRef = useRef(nodeId);
+  nodeIdRef.current = nodeId;
 
   // Sync position when initialPosition changes externally (load, undo, tidy)
   const prevInitial = useRef(initialPosition);
@@ -87,25 +103,27 @@ const useDragAndDrop = ({
     [onSelect],
   );
 
+  // handleMouseDown reads from positionRef – no stale closure on `position`
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (e.button !== 0) return;
 
       movedRef.current = false;
+      const cur = positionRef.current;
       dragDataRef.current = {
         startScreenX: e.clientX,
         startScreenY: e.clientY,
-        startWorldX: position.x,
-        startWorldY: position.y,
+        startWorldX: cur.x,
+        startWorldY: cur.y,
         started: false,
       };
       setIsDragging(true);
     },
-    [position],
+    [], // stable – reads from refs
   );
 
-  // Global mousemove/mouseup while dragging
+  // Global mousemove/mouseup while dragging – stable effect, reads from refs
   useEffect(() => {
     if (!isDragging) return;
 
@@ -130,14 +148,16 @@ const useDragAndDrop = ({
       let newY = dd.startWorldY + deltaScreenY / vp.zoom;
 
       // Snap
-      newX = snapToGrid(newX, snapSize);
-      newY = snapToGrid(newY, snapSize);
+      const snap = snapSizeRef.current;
+      newX = snapToGrid(newX, snap);
+      newY = snapToGrid(newY, snap);
 
       let pos = { x: newX, y: newY };
 
       // Allow alignment callback to adjust
-      if (onDragMove) {
-        pos = onDragMove(nodeId, pos);
+      const dragMove = onDragMoveRef.current;
+      if (dragMove) {
+        pos = dragMove(nodeIdRef.current, pos);
       }
 
       setPosition(pos);
@@ -145,7 +165,11 @@ const useDragAndDrop = ({
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      onDragEnd?.();
+      // Fire drag end with final position
+      const endCb = onDragEndRef.current;
+      if (endCb) {
+        endCb(nodeIdRef.current, positionRef.current);
+      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -154,7 +178,7 @@ const useDragAndDrop = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, snapSize, onDragMove, nodeId, onDragEnd]);
+  }, [isDragging]); // only re-subscribe when drag starts/stops
 
   const dragRef = useCallback((node: HTMLDivElement | null) => {
     nodeRef.current = node;
