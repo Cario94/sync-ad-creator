@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Facebook } from 'lucide-react';
 import AnimatedGradient from '@/components/ui/AnimatedGradient';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -24,12 +24,14 @@ const Login = () => {
     
     setIsLoading(true);
     
-    // Simulate login process for now
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       
-      // For demo, we'll just navigate to workspace
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      
       toast.success('Successfully logged in');
       navigate('/workspace');
     } catch (error) {
