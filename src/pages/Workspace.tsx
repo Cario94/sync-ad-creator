@@ -69,28 +69,30 @@ const Workspace = () => {
   // Track latest canvas state for save
   const elementsRef = useRef<CanvasElement[]>([]);
   const connectionsRef = useRef<Connection[]>([]);
-  const initialLoadRef = useRef(true);
+  // Count how many hydration callbacks we expect (elements + connections = 2)
+  const hydrationCountRef = useRef(0);
+  const hydrationDoneRef = useRef(false);
 
   const handleElementsChange = useCallback((elements: CanvasElement[]) => {
     elementsRef.current = elements;
-    // Skip the first hydration call
-    if (initialLoadRef.current) return;
+    if (!hydrationDoneRef.current) {
+      hydrationCountRef.current += 1;
+      // After both elements and connections have fired once, hydration is done
+      if (hydrationCountRef.current >= 2) hydrationDoneRef.current = true;
+      return;
+    }
     markDirty();
   }, [markDirty]);
 
   const handleConnectionsChange = useCallback((connections: Connection[]) => {
     connectionsRef.current = connections;
-    if (initialLoadRef.current) return;
+    if (!hydrationDoneRef.current) {
+      hydrationCountRef.current += 1;
+      if (hydrationCountRef.current >= 2) hydrationDoneRef.current = true;
+      return;
+    }
     markDirty();
   }, [markDirty]);
-
-  // After initial hydration settles, start tracking changes
-  // Use a small delay to skip the initial useEffect fires from Canvas
-  React.useEffect(() => {
-    if (!documentState) return;
-    const timer = setTimeout(() => { initialLoadRef.current = false; }, 500);
-    return () => clearTimeout(timer);
-  }, [documentState]);
 
   const handleSave = async () => {
     const viewport = canvasRef.current?.getViewport() ?? { x: 0, y: 0, zoom: 1 };
@@ -106,17 +108,20 @@ const Workspace = () => {
     }
   };
 
-  // Ctrl/Cmd+S shortcut
+  // Ctrl/Cmd+S shortcut — use a ref to avoid stale closure
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        handleSave();
+        handleSaveRef.current();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []);
   
   const handleLogout = async () => {
     await signOut();

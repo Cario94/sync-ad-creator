@@ -233,13 +233,13 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success('Layout organized successfully');
   };
 
-  // Expose methods via ref
+  // Expose methods via ref — must include all deps to avoid stale closures
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
     getElements: () => elements,
     getConnections: () => connections,
     getViewport: () => ({ x: pan.x, y: pan.y, zoom: scale }),
-  }));
+  }), [elements, connections, pan, scale, tidyLayout]);
   
   // Keyboard shortcuts
   useEffect(() => {
