@@ -5,6 +5,8 @@ import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateCampaignConfig } from './types/canvas';
+import NodeValidationBadge from './NodeValidationBadge';
+import { useNodeValidation } from '@/hooks/useNodeValidation';
 
 interface CampaignProps {
   name: string;

@@ -5,6 +5,8 @@ import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement, hydrateAdConfig } from './types/canvas';
+import NodeValidationBadge from './NodeValidationBadge';
+import { useNodeValidation } from '@/hooks/useNodeValidation';
 
 interface AdProps {
   name: string;
