@@ -91,15 +91,15 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const [projectName, setProjectName] = useState('');
   const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
 
-  // Fetch project metadata + update last_opened_at
+  // Fetch project metadata + update last_opened_at + log open
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !user) return;
     projectsService.get(projectId).then(project => {
       if (project) setProjectName(project.name);
     }).catch(() => {});
-    // Fire-and-forget: update last_opened_at
     projectsService.update(projectId, { last_opened_at: new Date().toISOString() }).catch(() => {});
-  }, [projectId]);
+    activityLogsService.projectOpened(user.id, projectId);
+  }, [projectId, user]);
 
   // ── History (managed via refs to avoid re-renders on every push) ──
   const historyRef = useRef<Snapshot[]>([]);
