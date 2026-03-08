@@ -102,7 +102,12 @@ const AdSetDialog: React.FC<AdSetDialogProps> = ({
       toast.error("Ad Set name is required");
       return;
     }
-    const finalData = { ...formData, placements: formData.automaticPlacements ? [] : formData.placements };
+    const finalData = {
+      ...formData,
+      placements: formData.automaticPlacements ? [] : formData.placements,
+      startDate: toDateString(formData.startDate),
+      endDate: toDateString(formData.endDate),
+    };
     onSave({ ...adSet, ...finalData });
     onOpenChange(false);
     toast.success(`Ad Set ${isEditing ? 'updated' : 'created'} successfully`);

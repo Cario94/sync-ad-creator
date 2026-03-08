@@ -90,7 +90,14 @@ const CampaignDialog: React.FC<CampaignDialogProps> = ({
       toast.error("Campaign name is required");
       return;
     }
-    onSave({ ...campaign, ...formData });
+    // Serialize dates as YYYY-MM-DD strings for storage
+    const serialized = {
+      ...campaign,
+      ...formData,
+      startDate: toDateString(formData.startDate),
+      endDate: toDateString(formData.endDate),
+    };
+    onSave(serialized);
     onOpenChange(false);
     toast.success(`Campaign ${isEditing ? 'updated' : 'created'} successfully`);
   };
