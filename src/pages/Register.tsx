@@ -56,14 +56,12 @@ const Register = () => {
         return;
       }
       
-      // If session exists, user is auto-confirmed → go to workspace
       if (data.session) {
         toast.success('Account created successfully!');
         navigate('/workspace');
       } else {
-        // Email confirmation required
-        toast.success('Account created! Check your email to confirm your account.');
-        navigate('/login');
+        setRegisteredEmail(email);
+        setPendingVerification(true);
       }
     } catch (error) {
       toast.error('Registration failed. Please try again.');
