@@ -16,6 +16,9 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
