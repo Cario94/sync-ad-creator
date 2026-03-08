@@ -36,7 +36,7 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
   const { minScale = 0.25, maxScale = 3 } = options;
 
   /** Ref to the OUTER container div (un-transformed, captures mouse events) */
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null!) as React.RefObject<HTMLDivElement>;
 
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
