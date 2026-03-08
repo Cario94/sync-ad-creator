@@ -5,6 +5,7 @@ import type { CanvasElement } from '@/components/workspace/types/canvas';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { Connection } from '@/hooks/useConnections';
 import { projectsService } from '@/services/projects';
+import { activityLogsService } from '@/services/activityLogs';
 import { toast } from 'sonner';
 
 // ── History ──
@@ -79,7 +80,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const { user } = useAuth();
 
   const {
-    projectId, documentState, isLoading, error,
+    projectId, documentState, version, isLoading, error,
     save: rawSave, saveStatus, markDirty,
   } = useProjectDocument(paramProjectId);
 
@@ -90,15 +91,15 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const [projectName, setProjectName] = useState('');
   const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
 
-  // Fetch project metadata + update last_opened_at
+  // Fetch project metadata + update last_opened_at + log open
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !user) return;
     projectsService.get(projectId).then(project => {
       if (project) setProjectName(project.name);
     }).catch(() => {});
-    // Fire-and-forget: update last_opened_at
     projectsService.update(projectId, { last_opened_at: new Date().toISOString() }).catch(() => {});
-  }, [projectId]);
+    activityLogsService.projectOpened(user.id, projectId);
+  }, [projectId, user]);
 
   // ── History (managed via refs to avoid re-renders on every push) ──
   const historyRef = useRef<Snapshot[]>([]);
@@ -140,7 +141,11 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
       viewport: viewportRef.current,
     };
     await rawSave(state);
-  }, [elements, connections, rawSave]);
+    // Log canvas save (fire-and-forget)
+    if (user && projectId) {
+      activityLogsService.canvasSaved(user.id, projectId, version);
+    }
+  }, [elements, connections, rawSave, user, projectId]);
 
   // ── History helpers (use refs for latest state) ──
   const elementsRef = useRef(elements);

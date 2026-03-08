@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { projectsService } from '@/services/projects';
+import { activityLogsService } from '@/services/activityLogs';
 import type { Project } from '@/types/database';
 import { formatDistanceToNow, format } from 'date-fns';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
@@ -96,6 +97,7 @@ const Dashboard = () => {
       setNewName('');
       setNewDescription('');
       toast.success('Project created');
+      activityLogsService.projectCreated(user.id, project.id, project.name);
       navigate(`/workspace/${project.id}`);
     } catch {
       toast.error('Failed to create project');
@@ -128,6 +130,7 @@ const Dashboard = () => {
       setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditProject(null);
       toast.success('Project updated');
+      activityLogsService.projectUpdated(user.id, updated.id, ['name', 'description']);
     } catch {
       toast.error('Failed to update project');
     } finally {
@@ -142,6 +145,7 @@ const Dashboard = () => {
     try {
       await projectsService.remove(deleteProject.id);
       setProjects(prev => prev.filter(p => p.id !== deleteProject.id));
+      if (user) activityLogsService.projectDeleted(user.id, deleteProject.id);
       setDeleteProject(null);
       toast.success('Project deleted');
     } catch {
