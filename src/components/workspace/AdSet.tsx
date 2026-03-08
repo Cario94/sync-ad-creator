@@ -5,6 +5,7 @@ import AdSetDialog from './dialogs/AdSetDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
 import { CanvasElement } from './types/canvas';
+import { fromDateString } from '@/lib/dateUtils';
 
 interface AdSetProps {
   name: string;
