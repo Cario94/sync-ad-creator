@@ -190,14 +190,8 @@ function WorkspaceInner() {
         {/* Toolbar */}
         <div className="p-4 flex justify-center">
           <ToolBar
-            onUndo={() => {
-              const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true });
-              window.dispatchEvent(event);
-            }}
-            onRedo={() => {
-              const event = new KeyboardEvent('keydown', { key: 'z', metaKey: true, ctrlKey: true, shiftKey: true });
-              window.dispatchEvent(event);
-            }}
+            onUndo={() => undo()}
+            onRedo={() => redo()}
             onAddCampaign={addCampaign}
             onAddAdSet={addAdSet}
             onAddAd={addAd}
