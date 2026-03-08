@@ -186,10 +186,14 @@ export const useCanvasInteraction = (options: UseCanvasInteractionOptions = {}) 
     return () => container.removeEventListener('wheel', wheelHandler);
   }, [minScale, maxScale]);
 
-  // ── Space key for pan mode ──
+  // ── Space key for pan mode (only when canvas is focused context, not inside inputs) ──
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept space in input/textarea/contenteditable
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
+
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         setSpacePressed(true);
