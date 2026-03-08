@@ -18,6 +18,10 @@ interface CanvasContextMenuProps {
   onDelete?: () => void;
   onDuplicate?: () => void;
   onConnect?: () => void;
+  onAddCampaign?: () => void;
+  onAddAdSet?: () => void;
+  onAddAd?: () => void;
+  onSave?: () => void;
   elementType: string;
 }
 
@@ -27,23 +31,26 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   onDelete,
   onDuplicate,
   onConnect,
+  onAddCampaign,
+  onAddAdSet,
+  onAddAd,
+  onSave,
   elementType
 }) => {
-  // If it's the canvas (empty element type), show the canvas context menu
   if (!elementType) {
     return (
       <ContextMenu>
         <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
         <ContextMenuContent className="w-64">
-          <ContextMenuItem className="flex items-center gap-2">
+          <ContextMenuItem className="flex items-center gap-2" onClick={onAddCampaign}>
             <Plus className="h-4 w-4" />
             <span>Add Campaign</span>
           </ContextMenuItem>
-          <ContextMenuItem className="flex items-center gap-2">
+          <ContextMenuItem className="flex items-center gap-2" onClick={onAddAdSet}>
             <Plus className="h-4 w-4" />
             <span>Add Ad Set</span>
           </ContextMenuItem>
-          <ContextMenuItem className="flex items-center gap-2">
+          <ContextMenuItem className="flex items-center gap-2" onClick={onAddAd}>
             <Plus className="h-4 w-4" />
             <span>Add Ad</span>
           </ContextMenuItem>
@@ -56,13 +63,12 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
             </ContextMenuSubContent>
           </ContextMenuSub>
           <ContextMenuSeparator />
-          <ContextMenuItem>Save Workspace</ContextMenuItem>
+          <ContextMenuItem onClick={onSave}>Save Workspace</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
     );
   }
 
-  // For campaign, ad set, and ad elements
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
