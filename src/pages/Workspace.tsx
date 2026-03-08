@@ -108,17 +108,20 @@ const Workspace = () => {
     }
   };
 
-  // Ctrl/Cmd+S shortcut
+  // Ctrl/Cmd+S shortcut — use a ref to avoid stale closure
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        handleSave();
+        handleSaveRef.current();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []);
   
   const handleLogout = async () => {
     await signOut();
