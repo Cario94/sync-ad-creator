@@ -80,7 +80,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const { user } = useAuth();
 
   const {
-    projectId, documentState, isLoading, error,
+    projectId, documentState, version, isLoading, error,
     save: rawSave, saveStatus, markDirty,
   } = useProjectDocument(paramProjectId);
 
