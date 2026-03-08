@@ -110,6 +110,7 @@ export function useMediaLibrary() {
     const item = toMediaItem(row);
     setMediaItems(prev => [item, ...prev]);
     toast.success('Media uploaded');
+    activityLogsService.mediaUploaded(user.id, null, file.name);
     return item;
   }, [user]);
 

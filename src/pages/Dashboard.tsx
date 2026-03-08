@@ -145,6 +145,7 @@ const Dashboard = () => {
     try {
       await projectsService.remove(deleteProject.id);
       setProjects(prev => prev.filter(p => p.id !== deleteProject.id));
+      if (user) activityLogsService.projectDeleted(user.id, deleteProject.id);
       setDeleteProject(null);
       toast.success('Project deleted');
     } catch {
