@@ -130,6 +130,7 @@ const Dashboard = () => {
       setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditProject(null);
       toast.success('Project updated');
+      activityLogsService.projectUpdated(user.id, updated.id, ['name', 'description']);
     } catch {
       toast.error('Failed to update project');
     } finally {
