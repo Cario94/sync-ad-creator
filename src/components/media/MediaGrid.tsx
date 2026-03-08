@@ -97,7 +97,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
         <div 
           key={item.id} 
           className={`
-            group bg-white border border-border rounded-lg overflow-hidden flex flex-col transition-all duration-200
+            group bg-card border border-border rounded-lg overflow-hidden flex flex-col transition-all duration-200
             ${selectable ? 'cursor-pointer hover:border-primary hover:shadow-md' : ''}
           `}
           onClick={selectable ? () => handleSelect(item) : undefined}
@@ -117,6 +117,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
                 src={item.url} 
                 alt={item.name}
                 className="object-cover w-full h-full"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : item.type.startsWith('video/') ? (
               <div className="w-full h-full flex items-center justify-center relative">
@@ -204,7 +205,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => handleDelete(item)}
-                    className="text-red-500 focus:text-red-500"
+                    className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
@@ -237,7 +238,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
                 confirmDelete();
               }}
               disabled={isDeleting}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
