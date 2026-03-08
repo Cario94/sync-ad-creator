@@ -34,6 +34,9 @@ interface CanvasRef {
   addElement: (element: CanvasElement) => void;
 }
 
+const generateId = (type: string) =>
+  `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
 const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   className = '',
   initialElements,
@@ -49,10 +52,8 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   onRedo,
   onTidyLayout
 }, ref) => {
-  // State for canvas elements – start empty, populated via initialElements
   const [elements, setElements] = useState<CanvasElement[]>([]);
   
-  // Use the custom hook for all canvas interactions
   const {
     canvasRef,
     scale,
@@ -76,7 +77,6 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     addToHistory
   } = useCanvasInteraction();
   
-  // Use connections hook
   const {
     connections,
     isCreatingConnection,
@@ -88,17 +88,13 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     setConnections
   } = useConnections();
 
-  // Hydrate from DB when initial data arrives
+  // Hydrate from DB
   useEffect(() => {
-    if (initialElements) {
-      setElements(initialElements);
-    }
+    if (initialElements) setElements(initialElements);
   }, [initialElements]);
 
   useEffect(() => {
-    if (initialConnections) {
-      setConnections(initialConnections);
-    }
+    if (initialConnections) setConnections(initialConnections);
   }, [initialConnections]);
 
   useEffect(() => {
@@ -109,31 +105,17 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   }, [initialViewport]);
 
   // Notify parent of changes
-  useEffect(() => {
-    onElementsChange?.(elements);
-  }, [elements]);
-
-  useEffect(() => {
-    onConnectionsChange?.(connections);
-  }, [connections]);
+  useEffect(() => { onElementsChange?.(elements); }, [elements]);
+  useEffect(() => { onConnectionsChange?.(connections); }, [connections]);
   
-  // Add state for selected elements
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
-  
-  // Get the selected elements
   const selectedElements = elements.filter(el => selectedElementIds.includes(el.id));
-  
-  // Multi-select settings dialog state
   const [showMultiSettings, setShowMultiSettings] = useState(false);
   
-  // Update element position when dragged
   const updateElementPosition = (id: string, position: { x: number; y: number }) => {
-    setElements(prev => 
-      prev.map(el => el.id === id ? { ...el, position } : el)
-    );
+    setElements(prev => prev.map(el => el.id === id ? { ...el, position } : el));
   };
   
-  // Handle canvas background click to deselect
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       setSelectedElementIds([]);
@@ -141,29 +123,18 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     }
   };
   
-  // Complete selection with rectangle  
+  // Rectangle selection
   useEffect(() => {
     if (!isSelecting && selectionRect && selectionRect.width > 5 && selectionRect.height > 5) {
       const selectedIds = elements.filter(element => {
         const { x, y } = element.position;
         const elementWidth = 256;
         const elementHeight = element.type === 'campaign' ? 140 : element.type === 'adset' ? 130 : 120;
-        
-        const elementLeft = x;
-        const elementRight = x + elementWidth;
-        const elementTop = y;
-        const elementBottom = y + elementHeight;
-        
-        const selectionLeft = selectionRect.startX;
-        const selectionRight = selectionRect.startX + selectionRect.width;
-        const selectionTop = selectionRect.startY;
-        const selectionBottom = selectionRect.startY + selectionRect.height;
-        
         return !(
-          elementRight < selectionLeft ||
-          elementLeft > selectionRight ||
-          elementBottom < selectionTop ||
-          elementTop > selectionBottom
+          x + elementWidth < selectionRect.startX ||
+          x > selectionRect.startX + selectionRect.width ||
+          y + elementHeight < selectionRect.startY ||
+          y > selectionRect.startY + selectionRect.height
         );
       }).map(el => el.id);
       
@@ -176,15 +147,11 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
         setShowMultiSettings(false);
       }
     }
-    if (!isSelecting && selectionRect) {
-      const timer = setTimeout(() => {}, 50);
-      return () => clearTimeout(timer);
-    }
   }, [isSelecting, selectionRect, elements]);
   
   const handleSelectElement = (id: string) => {
     if (selectedElementIds.includes(id)) {
-      setSelectedElementIds(prev => prev.filter(elementId => elementId !== id));
+      setSelectedElementIds(prev => prev.filter(eid => eid !== id));
     } else {
       setSelectedElementIds([id]);
     }
@@ -193,9 +160,7 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
   
   const updateMultipleElements = (updates: Partial<CanvasElement>) => {
     setElements(prev => {
-      const updated = prev.map(el => 
-        selectedElementIds.includes(el.id) ? { ...el, ...updates } : el
-      );
+      const updated = prev.map(el => selectedElementIds.includes(el.id) ? { ...el, ...updates } : el);
       addToHistory(updated);
       return updated;
     });
@@ -209,6 +174,90 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       return updated;
     });
   };
+
+  // ── Edit element (from dialog save) ──
+  const handleEditElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
+    setElements(prev => {
+      const updated = prev.map(el => el.id === id ? { ...el, ...updates } : el);
+      addToHistory(updated);
+      return updated;
+    });
+  }, [addToHistory]);
+
+  // ── Cascade delete ──
+  const handleDeleteElement = useCallback((id: string) => {
+    setElements(prev => {
+      const target = prev.find(el => el.id === id);
+      if (!target) return prev;
+
+      // Collect IDs to remove: the target + cascade children via edges
+      const idsToRemove = new Set<string>([id]);
+
+      if (target.type === 'campaign') {
+        // Find adsets connected to this campaign
+        const childAdSetIds = connections
+          .filter(c => c.sourceId === id)
+          .map(c => c.targetId);
+        childAdSetIds.forEach(asId => {
+          idsToRemove.add(asId);
+          // Find ads connected to those adsets
+          connections
+            .filter(c => c.sourceId === asId)
+            .forEach(c => idsToRemove.add(c.targetId));
+        });
+      } else if (target.type === 'adset') {
+        // Find ads connected to this adset
+        connections
+          .filter(c => c.sourceId === id)
+          .forEach(c => idsToRemove.add(c.targetId));
+      }
+
+      // Remove orphaned connections
+      connections
+        .filter(c => idsToRemove.has(c.sourceId) || idsToRemove.has(c.targetId))
+        .forEach(c => removeConnection(c.id));
+
+      const updated = prev.filter(el => !idsToRemove.has(el.id));
+      addToHistory(updated);
+
+      const count = idsToRemove.size;
+      toast.success(`Deleted ${count} element${count > 1 ? 's' : ''}`);
+      return updated;
+    });
+
+    setSelectedElementIds(prev => prev.filter(eid => eid !== id));
+    setShowMultiSettings(false);
+  }, [connections, removeConnection, addToHistory]);
+
+  // ── Duplicate element ──
+  const handleDuplicateElement = useCallback((id: string) => {
+    setElements(prev => {
+      const source = prev.find(el => el.id === id);
+      if (!source) return prev;
+
+      const newElement: CanvasElement = {
+        ...source,
+        id: generateId(source.type),
+        name: `${source.name} (copy)`,
+        position: { x: source.position.x + 30, y: source.position.y + 30 },
+        config: source.config ? { ...source.config } : undefined,
+      };
+
+      const updated = [...prev, newElement];
+      addToHistory(updated);
+      toast.success(`Duplicated ${source.type}`);
+      return updated;
+    });
+  }, [addToHistory]);
+
+  // ── Helpers for child dialogs ──
+  const getCampaigns = useCallback(() => 
+    elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
+  [elements]);
+
+  const getAdSets = useCallback(() => 
+    elements.filter(el => el.type === 'adset').map(el => ({ id: el.id, name: el.name })),
+  [elements]);
 
   const tidyLayout = () => {
     const campaigns = elements.filter(el => el.type === 'campaign');
@@ -237,7 +286,6 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success('Layout organized successfully');
   };
 
-  // Add element programmatically
   const addElement = useCallback((element: CanvasElement) => {
     setElements(prev => {
       const updated = [...prev, element];
@@ -247,7 +295,6 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
     setSelectedElementIds([element.id]);
   }, [addToHistory]);
 
-  // Expose methods via ref — must include all deps to avoid stale closures
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
     getElements: () => elements,
@@ -293,21 +340,16 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
       
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.length > 0) {
         e.preventDefault();
-        const newElements = elements.filter(el => !selectedElementIds.includes(el.id));
-        setElements(newElements);
-        connections
-          .filter(conn => selectedElementIds.includes(conn.sourceId) || selectedElementIds.includes(conn.targetId))
-          .forEach(conn => removeConnection(conn.id));
+        // Use cascade delete for each selected element
+        selectedElementIds.forEach(id => handleDeleteElement(id));
         setSelectedElementIds([]);
         setShowMultiSettings(false);
-        toast.success(`Deleted ${selectedElementIds.length} element(s)`);
-        addToHistory(newElements);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, connections, removeConnection, onUndo, onRedo]);
+  }, [elements, selectedElements, selectedElementIds, handleCopy, handlePaste, handleDuplicate, handleUndo, handleRedo, addToHistory, connections, removeConnection, onUndo, onRedo, handleDeleteElement]);
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
@@ -376,6 +418,11 @@ const Canvas = React.forwardRef<CanvasRef, CanvasProps>(({
             onCancelConnection={cancelConnection}
             onRemoveConnection={removeConnection}
             onUpdatePosition={updateElementPosition}
+            onEditElement={handleEditElement}
+            onDeleteElement={handleDeleteElement}
+            onDuplicateElement={handleDuplicateElement}
+            getCampaigns={getCampaigns}
+            getAdSets={getAdSets}
           />
         </div>
       </CanvasContextMenu>

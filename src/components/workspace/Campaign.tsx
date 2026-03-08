@@ -4,9 +4,11 @@ import { Megaphone, Link } from 'lucide-react';
 import CampaignDialog from './dialogs/CampaignDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
+import { CanvasElement } from './types/canvas';
 
 interface CampaignProps {
   name: string;
+  config?: Record<string, unknown>;
   initialPosition?: { x: number; y: number };
   id?: string;
   isSelected?: boolean;
@@ -17,10 +19,14 @@ interface CampaignProps {
   onStartConnection?: () => void;
   onCompleteConnection?: () => void;
   onUpdatePosition?: (position: { x: number; y: number }) => void;
+  onEdit?: (updates: Partial<CanvasElement>) => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
 }
 
 const Campaign: React.FC<CampaignProps> = ({ 
   name, 
+  config = {},
   initialPosition = { x: 0, y: 0 },
   id = `campaign-${Date.now()}`,
   isSelected = false,
@@ -31,34 +37,37 @@ const Campaign: React.FC<CampaignProps> = ({
   onStartConnection,
   onCompleteConnection,
   onUpdatePosition,
+  onEdit,
+  onDelete,
+  onDuplicate,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [campaignData, setCampaignData] = useState({
+
+  // Build dialog data from props
+  const campaignData = {
     id,
     name,
-    objective: 'awareness',
-    budget: 50,
-    specialAdCategory: false,
-    abTesting: false,
-    buyingType: 'auction',
-    budgetOptimization: true,
-    bidStrategy: 'lowest_cost',
-    startDate: new Date(),
-    adStrategyType: 'standard',
-    placementStrategy: true,
-  });
+    objective: (config.objective as string) || 'awareness',
+    budget: (config.budget as number) || 50,
+    specialAdCategory: (config.specialAdCategory as boolean) || false,
+    abTesting: (config.abTesting as boolean) || false,
+    buyingType: (config.buyingType as string) || 'auction',
+    budgetOptimization: config.budgetOptimization !== undefined ? (config.budgetOptimization as boolean) : true,
+    bidStrategy: (config.bidStrategy as string) || 'lowest_cost',
+    startDate: config.startDate ? new Date(config.startDate as string) : new Date(),
+    adStrategyType: (config.adStrategyType as string) || 'standard',
+    placementStrategy: config.placementStrategy !== undefined ? (config.placementStrategy as boolean) : true,
+  };
 
   const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
   });
 
-  // Sync external selection state
   useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
 
-  // Sync position with parent component when dragging
   useEffect(() => {
     if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
       onUpdatePosition(position);
@@ -71,19 +80,18 @@ const Campaign: React.FC<CampaignProps> = ({
     setDialogOpen(true);
   };
 
-  const handleSave = (updatedCampaign: any) => {
-    setCampaignData(updatedCampaign);
+  const handleSave = (updated: any) => {
+    const { id: _id, name: newName, ...rest } = updated;
+    onEdit?.({ name: newName, config: rest });
   };
 
   const handleDelete = () => {
-    // In a real implementation, this would remove the campaign from the canvas
-    console.log(`Delete campaign: ${campaignData.id}`);
+    onDelete?.();
   };
 
   const isActiveConnection = activeConnectionId === id;
   const isConnectionTarget = isCreatingConnection && !isActiveConnection;
 
-  // Handle connection operations
   const handleConnectionStart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onStartConnection) onStartConnection();
@@ -94,12 +102,9 @@ const Campaign: React.FC<CampaignProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
     dragRef(el);
-    if (elementRef) {
-      elementRef(el);
-    }
+    if (elementRef) elementRef(el);
   };
 
   return (
@@ -107,6 +112,8 @@ const Campaign: React.FC<CampaignProps> = ({
       <CanvasContextMenu 
         onEdit={() => setDialogOpen(true)} 
         onConnect={onStartConnection}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
         elementType="campaign"
       >
         <div
@@ -141,12 +148,11 @@ const Campaign: React.FC<CampaignProps> = ({
             </div>
             <div className="font-semibold text-sm uppercase tracking-wide text-primary">Campaign</div>
           </div>
-          <h3 className="font-bold text-lg mb-1">{campaignData.name}</h3>
+          <h3 className="font-bold text-lg mb-1">{name}</h3>
           <div className="mt-2 text-xs text-muted-foreground font-medium">
             Objective: {campaignData.objective.charAt(0).toUpperCase() + campaignData.objective.slice(1)}
           </div>
           
-          {/* Connection button */}
           <button
             className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             onClick={handleConnectionStart}

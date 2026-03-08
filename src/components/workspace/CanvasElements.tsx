@@ -17,6 +17,11 @@ interface CanvasElementsProps {
   onCancelConnection: () => void;
   onRemoveConnection: (id: string) => void;
   onUpdatePosition: (id: string, position: { x: number; y: number }) => void;
+  onEditElement: (id: string, updates: Partial<CanvasElement>) => void;
+  onDeleteElement: (id: string) => void;
+  onDuplicateElement: (id: string) => void;
+  getCampaigns: () => { id: string; name: string }[];
+  getAdSets: () => { id: string; name: string }[];
 }
 
 const CanvasElements: React.FC<CanvasElementsProps> = ({ 
@@ -30,50 +35,44 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
   onCompleteConnection,
   onCancelConnection,
   onRemoveConnection,
-  onUpdatePosition
+  onUpdatePosition,
+  onEditElement,
+  onDeleteElement,
+  onDuplicateElement,
+  getCampaigns,
+  getAdSets,
 }) => {
   const [elementPositions, setElementPositions] = useState<ElementPosition[]>([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const elementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Handle mouse movement for dynamic connection creation
   useEffect(() => {
     if (!isCreatingConnection || !svgRef.current) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!svgRef.current) return;
-      
       const rect = svgRef.current.getBoundingClientRect();
-      setMousePosition({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
+      setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     };
 
-    const handleMouseUp = () => {
-      onCancelConnection();
-    };
+    const handleMouseUp = () => { onCancelConnection(); };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isCreatingConnection, onCancelConnection]);
 
-  // Track element positions for drawing connections with better performance
   useEffect(() => {
     const updateElementPositions = () => {
       const positions: ElementPosition[] = [];
-      
       elementsRef.current.forEach((element, id) => {
         if (element) {
           const rect = element.getBoundingClientRect();
           const svgRect = svgRef.current?.getBoundingClientRect();
-          
           if (svgRect) {
             positions.push({
               id,
@@ -85,11 +84,9 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
           }
         }
       });
-      
       setElementPositions(positions);
     };
 
-    // Use requestAnimationFrame for smoother updates
     let rafId: number;
     const scheduleUpdate = () => {
       cancelAnimationFrame(rafId);
@@ -99,13 +96,9 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     scheduleUpdate();
     
     const resizeObserver = new ResizeObserver(scheduleUpdate);
-    
     elementsRef.current.forEach(element => {
-      if (element) {
-        resizeObserver.observe(element);
-      }
+      if (element) resizeObserver.observe(element);
     });
-    
     if (svgRef.current?.parentElement) {
       resizeObserver.observe(svgRef.current.parentElement);
     }
@@ -116,7 +109,6 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
     };
   }, [elements]);
 
-  // Handle element references
   const handleElementRef = (id: string, element: HTMLDivElement | null) => {
     if (element) {
       elementsRef.current.set(id, element);
@@ -151,6 +143,11 @@ const CanvasElements: React.FC<CanvasElementsProps> = ({
         onStartConnection={onStartConnection}
         onCompleteConnection={onCompleteConnection}
         onUpdatePosition={onUpdatePosition}
+        onEditElement={onEditElement}
+        onDeleteElement={onDeleteElement}
+        onDuplicateElement={onDuplicateElement}
+        getCampaigns={getCampaigns}
+        getAdSets={getAdSets}
         elementRefs={handleElementRef}
       />
     </>

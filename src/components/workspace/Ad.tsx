@@ -4,9 +4,11 @@ import { ImageIcon } from 'lucide-react';
 import AdDialog from './dialogs/AdDialog';
 import CanvasContextMenu from './CanvasContextMenu';
 import { cn } from '@/lib/utils';
+import { CanvasElement } from './types/canvas';
 
 interface AdProps {
   name: string;
+  config?: Record<string, unknown>;
   initialPosition?: { x: number; y: number };
   id?: string;
   isSelected?: boolean;
@@ -16,10 +18,15 @@ interface AdProps {
   onSelect?: () => void;
   onCompleteConnection?: () => void;
   onUpdatePosition?: (position: { x: number; y: number }) => void;
+  onEdit?: (updates: Partial<CanvasElement>) => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
+  adSets?: { id: string; name: string }[];
 }
 
 const Ad: React.FC<AdProps> = ({ 
   name, 
+  config = {},
   initialPosition = { x: 0, y: 0 },
   id = `ad-${Date.now()}`,
   isSelected = false,
@@ -29,32 +36,35 @@ const Ad: React.FC<AdProps> = ({
   onSelect,
   onCompleteConnection,
   onUpdatePosition,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  adSets = [],
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [adData, setAdData] = useState({
+
+  const adData = {
     id,
     name,
-    adSetId: '',
-    primaryText: '',
-    headline: name,
-    description: '',
-    callToAction: 'learn_more',
-    destinationUrl: 'https://',
-    displayUrl: '',
-    imageUrl: '',
-  });
+    adSetId: (config.adSetId as string) || '',
+    primaryText: (config.primaryText as string) || '',
+    headline: (config.headline as string) || name,
+    description: (config.description as string) || '',
+    callToAction: (config.callToAction as string) || 'learn_more',
+    destinationUrl: (config.destinationUrl as string) || 'https://',
+    displayUrl: (config.displayUrl as string) || '',
+    imageUrl: (config.imageUrl as string) || '',
+  };
 
   const { position, isDragging, isSelected: dragSelected, setIsSelected, dragRef, handleMouseDown, handleClick } = useDragAndDrop({
     initialPosition,
     onSelect,
   });
 
-  // Sync external selection state
   useEffect(() => {
     setIsSelected(isSelected);
   }, [isSelected, setIsSelected]);
 
-  // Sync position with parent component when dragging
   useEffect(() => {
     if (onUpdatePosition && (position.x !== initialPosition.x || position.y !== initialPosition.y)) {
       onUpdatePosition(position);
@@ -67,13 +77,13 @@ const Ad: React.FC<AdProps> = ({
     setDialogOpen(true);
   };
 
-  const handleSave = (updatedAd: any) => {
-    setAdData(updatedAd);
+  const handleSave = (updated: any) => {
+    const { id: _id, name: newName, ...rest } = updated;
+    onEdit?.({ name: newName, config: rest });
   };
 
   const handleDelete = () => {
-    // In a real implementation, this would remove the ad from the canvas
-    console.log(`Delete ad: ${adData.id}`);
+    onDelete?.();
   };
 
   const isActiveConnection = activeConnectionId === id;
@@ -84,17 +94,19 @@ const Ad: React.FC<AdProps> = ({
     if (isConnectionTarget && onCompleteConnection) onCompleteConnection();
   };
 
-  // Set up the combined ref for both dragging and positioning
   const combinedRef = (el: HTMLDivElement | null) => {
     dragRef(el);
-    if (elementRef) {
-      elementRef(el);
-    }
+    if (elementRef) elementRef(el);
   };
 
   return (
     <>
-      <CanvasContextMenu onEdit={() => setDialogOpen(true)} elementType="ad">
+      <CanvasContextMenu
+        onEdit={() => setDialogOpen(true)}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+        elementType="ad"
+      >
         <div
           ref={combinedRef}
           className={cn(
@@ -128,13 +140,13 @@ const Ad: React.FC<AdProps> = ({
             </div>
             <div className="font-medium text-xs uppercase tracking-wide text-muted-foreground">Ad</div>
           </div>
-          <h3 className="font-semibold text-sm mb-1">{adData.name}</h3>
+          <h3 className="font-semibold text-sm mb-1">{name}</h3>
           
           {adData.imageUrl && (
             <div className="mt-2 mb-2 h-20 rounded-md overflow-hidden bg-secondary/30">
               <img 
                 src={adData.imageUrl} 
-                alt={adData.name} 
+                alt={name} 
                 className="w-full h-full object-cover"
               />
             </div>
@@ -152,9 +164,7 @@ const Ad: React.FC<AdProps> = ({
         ad={adData}
         onSave={handleSave}
         onDelete={handleDelete}
-        adSets={[
-          { id: 'adset-1', name: 'Women 25-34' }
-        ]}
+        adSets={adSets}
       />
     </>
   );
