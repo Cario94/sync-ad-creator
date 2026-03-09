@@ -170,3 +170,50 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-foreground/10 rounded-full hover:bg-foreground/20;
 }
+
+/* React Flow overrides */
+.react-flow__controls {
+  @apply bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-md;
+}
+
+.react-flow__controls-button {
+  @apply bg-transparent border-none text-foreground hover:bg-muted;
+}
+
+.react-flow__controls-button svg {
+  @apply fill-foreground;
+}
+
+.react-flow__minimap {
+  @apply bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-md;
+}
+
+.react-flow__edge-path {
+  stroke: hsl(var(--muted-foreground) / 0.55);
+}
+
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: hsl(var(--primary));
+}
+
+.react-flow__handle {
+  @apply transition-all duration-150;
+}
+
+.react-flow__handle:hover {
+  @apply scale-125;
+}
+
+.react-flow__connection-line {
+  stroke: hsl(var(--primary));
+  stroke-dasharray: 6 4;
+}
+
+.react-flow__selection {
+  @apply bg-primary/10 border-2 border-primary;
+}
+
+.react-flow__panel {
+  @apply m-0;
+}
