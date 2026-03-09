@@ -73,7 +73,7 @@ export default function ValidationPanel() {
   };
 
   return (
-    <div className="absolute top-4 left-4 z-30">
+    <div className="z-30">
       {/* Toggle button */}
       <Button
         variant="outline"
