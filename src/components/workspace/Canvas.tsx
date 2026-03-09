@@ -116,9 +116,9 @@ function nodesToElements(nodes: Node[], existingElements: CanvasElement[]): Canv
     return {
       id: n.id,
       type: (n.type as CanvasElement['type']) || 'campaign',
-      name: n.data?.label ?? existing?.name ?? 'Untitled',
+      name: (n.data?.label as string) ?? existing?.name ?? 'Untitled',
       position: { x: n.position.x, y: n.position.y },
-      config: n.data?.config ?? existing?.config ?? {},
+      config: (n.data?.config as Record<string, unknown>) ?? existing?.config ?? {},
     };
   });
 }
