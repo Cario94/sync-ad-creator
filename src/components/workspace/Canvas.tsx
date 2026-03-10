@@ -576,14 +576,15 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
             selectNodesOnDrag={false}
-            panOnDrag={[0, 1, 2]}
+            panOnDrag={[1, 2]}
             selectionOnDrag
             deleteKeyCode={null}
             multiSelectionKeyCode="Shift"
-            zoomOnScroll
+            zoomOnScroll={false}
             zoomOnPinch
-            panOnScroll={false}
-            minZoom={0.25}
+            panOnScroll
+            panOnScrollMode="free" as any
+            minZoom={0.15}
             maxZoom={3}
             proOptions={{ hideAttribution: true }}
           >
@@ -592,6 +593,17 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
               gap={25}
               size={1}
               color="hsl(var(--border) / 0.5)"
+            />
+            <Controls
+              showInteractive={false}
+              position="bottom-right"
+            />
+            <MiniMap
+              position="bottom-left"
+              nodeStrokeWidth={3}
+              pannable
+              zoomable
+              maskColor="hsl(var(--background) / 0.7)"
             />
             <Panel position="top-left">
               <ValidationPanel />
