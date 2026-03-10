@@ -413,6 +413,18 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     interactionWidth: 26,
   }), []);
 
+  const interactionModel = useMemo(() => ({
+    // Primary desktop behavior: drag empty space to pan.
+    panOnDrag: true as const,
+    // Keep marquee selection explicit so it doesn't conflict with panning.
+    selectionOnDrag: false,
+    // Use one modifier model for range-select and additive selection.
+    selectionKeyCode: 'Shift' as const,
+    multiSelectionKeyCode: 'Shift' as const,
+    // Keep middle-mouse panning available as an alternative muscle memory.
+    panActivationKeyCode: 'Space' as const,
+  }), []);
+
   return (
     <div className={`w-full h-full ${className}`}>
       <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
@@ -432,11 +444,11 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
             selectNodesOnDrag={false}
-            selectionOnDrag
-            selectionKeyCode="Shift"
-            multiSelectionKeyCode="Shift"
-            panOnDrag={[1]}
-            panActivationKeyCode="Space"
+            selectionOnDrag={interactionModel.selectionOnDrag}
+            selectionKeyCode={interactionModel.selectionKeyCode}
+            multiSelectionKeyCode={interactionModel.multiSelectionKeyCode}
+            panOnDrag={interactionModel.panOnDrag}
+            panActivationKeyCode={interactionModel.panActivationKeyCode}
             panOnScroll
             panOnScrollMode={PanOnScrollMode.Free}
             panOnScrollSpeed={0.75}
