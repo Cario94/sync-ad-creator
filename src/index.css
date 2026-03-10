@@ -194,28 +194,37 @@
   fill: hsl(var(--background) / 0.7);
 }
 
-.react-flow__edge-path {
-  stroke: hsl(var(--muted-foreground) / 0.55);
-  transition: stroke 0.15s ease;
+.workspace-flow .workspace-edge-path {
+  filter: drop-shadow(0 1px 0 hsl(var(--background) / 0.5));
 }
 
-.react-flow__edge:hover .react-flow__edge-path,
-.react-flow__edge.selected .react-flow__edge-path {
+.workspace-flow .react-flow__edge:hover .workspace-edge-path,
+.workspace-flow .react-flow__edge.selected .workspace-edge-path {
   stroke: hsl(var(--primary));
-  stroke-width: 2.5;
 }
 
-.react-flow__handle {
+.workspace-flow .react-flow__arrowhead {
+  fill: hsl(var(--muted-foreground) / 0.8);
+  transition: fill 0.15s ease;
+}
+
+.workspace-flow .react-flow__edge:hover .react-flow__arrowhead,
+.workspace-flow .react-flow__edge.selected .react-flow__arrowhead {
+  fill: hsl(var(--primary));
+}
+
+.workspace-flow .react-flow__handle {
   @apply transition-all duration-150;
 }
 
-.react-flow__handle:hover {
-  @apply scale-125;
+.workspace-flow .react-flow__handle:hover,
+.workspace-flow .react-flow__handle.connectingfrom,
+.workspace-flow .react-flow__handle.connectingto {
+  @apply scale-110;
 }
 
-.react-flow__connection-line {
-  stroke: hsl(var(--primary));
-  stroke-dasharray: 6 4;
+.workspace-flow .workspace-connection-line {
+  pointer-events: none;
 }
 
 .react-flow__selection {

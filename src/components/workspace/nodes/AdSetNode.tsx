@@ -63,12 +63,14 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
           <Handle
             type="target"
             position={Position.Left}
-            className="!w-3 !h-3 !bg-accent-foreground/60 !border-2 !border-background"
+            className="!w-3.5 !h-3.5 !bg-accent-foreground/70 !border-2 !border-background !shadow-sm"
+            style={{ top: '50%' }}
           />
           <Handle
             type="source"
             position={Position.Right}
-            className="!w-3 !h-3 !bg-accent-foreground/60 !border-2 !border-background"
+            className="!w-3.5 !h-3.5 !bg-accent-foreground/70 !border-2 !border-background !shadow-sm"
+            style={{ top: '50%' }}
           />
         </div>
       </CanvasContextMenu>

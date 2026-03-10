@@ -6,53 +6,63 @@ interface XY {
   y: number;
 }
 
-const NODE_HEIGHT: Record<CanvasElement['type'], number> = {
-  campaign: 140,
-  adset: 130,
-  ad: 120,
+interface LaneMetrics {
+  nodeHeight: number;
+  rowGap: number;
+}
+
+const LANE_METRICS: Record<CanvasElement['type'], LaneMetrics> = {
+  campaign: { nodeHeight: 138, rowGap: 44 },
+  adset: { nodeHeight: 132, rowGap: 36 },
+  ad: { nodeHeight: 124, rowGap: 30 },
 };
 
 const COL_X: Record<CanvasElement['type'], number> = {
   campaign: 100,
-  adset: 440,
-  ad: 780,
+  adset: 450,
+  ad: 800,
 };
 
-const ROW_GAP = 40;
-const ADSET_GAP = 55;
-const GROUP_GAP = 90;
 const START_Y = 100;
+const GROUP_BASE_GAP = 96;
+const GROUP_DENSITY_GAP = 22;
+const SUBTREE_GAP = 48;
 
 const sortElements = (elements: CanvasElement[]) =>
   [...elements].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 
-const appendSorted = (map: Map<string, string[]>, key: string, value: string) => {
-  const existing = map.get(key) ?? [];
-  existing.push(value);
-  map.set(key, existing);
+const pushMap = (map: Map<string, string[]>, key: string, value: string) => {
+  const next = map.get(key) ?? [];
+  next.push(value);
+  map.set(key, next);
 };
 
 const uniqueSorted = (ids: string[]) => [...new Set(ids)].sort();
 
+const nodeSpan = (type: CanvasElement['type']) => LANE_METRICS[type].nodeHeight;
+
 /**
  * Hierarchy-aware tidy layout for Campaign -> Ad Set -> Ad.
- * - Campaign groups are laid out top-to-bottom.
- * - Ad Sets and Ads are vertically grouped under their real parents.
- * - Orphan Ad Sets (no campaign) and orphan Ads (no ad set) are placed in separate deterministic lanes.
+ *
+ * Improvements over rigid column stacking:
+ * - Uses subtree spans to vertically center parents over children.
+ * - Uses per-lane spacing/height metrics (not one global gap assumption).
+ * - Chooses deterministic preferred parents when nodes are partially connected to multiple parents.
+ * - Handles campaign groups, orphan ad sets, orphan ads in distinct deterministic blocks.
  */
 export const buildHierarchyLayout = (
   elements: CanvasElement[],
   connections: WorkspaceConnection[],
 ): Map<string, XY> => {
-  const pos = new Map<string, XY>();
+  const positions = new Map<string, XY>();
   const byId = new Map(elements.map(el => [el.id, el]));
 
   const campaigns = sortElements(elements.filter(el => el.type === 'campaign'));
   const adSets = sortElements(elements.filter(el => el.type === 'adset'));
   const ads = sortElements(elements.filter(el => el.type === 'ad'));
 
-  const adSetsByCampaign = new Map<string, string[]>();
-  const adsByAdSet = new Map<string, string[]>();
+  const campaignParentByAdSet = new Map<string, string[]>();
+  const adSetParentByAd = new Map<string, string[]>();
 
   for (const conn of connections) {
     const source = byId.get(conn.sourceId);
@@ -60,44 +70,73 @@ export const buildHierarchyLayout = (
     if (!source || !target) continue;
 
     if (source.type === 'campaign' && target.type === 'adset') {
-      appendSorted(adSetsByCampaign, source.id, target.id);
-    }
-
-    if (source.type === 'adset' && target.type === 'ad') {
-      appendSorted(adsByAdSet, source.id, target.id);
+      pushMap(campaignParentByAdSet, target.id, source.id);
+    } else if (source.type === 'adset' && target.type === 'ad') {
+      pushMap(adSetParentByAd, target.id, source.id);
     }
   }
 
-  for (const [k, ids] of adSetsByCampaign) adSetsByCampaign.set(k, uniqueSorted(ids));
-  for (const [k, ids] of adsByAdSet) adsByAdSet.set(k, uniqueSorted(ids));
+  for (const [key, value] of campaignParentByAdSet) campaignParentByAdSet.set(key, uniqueSorted(value));
+  for (const [key, value] of adSetParentByAd) adSetParentByAd.set(key, uniqueSorted(value));
 
-  let cursorY = START_Y;
+  // Deterministic parent selection when there are multiple incoming parents.
+  const preferredCampaignByAdSet = new Map<string, string>();
+  for (const adSet of adSets) {
+    const candidates = campaignParentByAdSet.get(adSet.id) ?? [];
+    if (candidates.length > 0) preferredCampaignByAdSet.set(adSet.id, candidates[0]);
+  }
+
+  const preferredAdSetByAd = new Map<string, string>();
+  for (const ad of ads) {
+    const candidates = adSetParentByAd.get(ad.id) ?? [];
+    if (candidates.length > 0) preferredAdSetByAd.set(ad.id, candidates[0]);
+  }
+
+  const adSetsByCampaign = new Map<string, string[]>();
+  for (const adSet of adSets) {
+    const campaignId = preferredCampaignByAdSet.get(adSet.id);
+    if (!campaignId) continue;
+    pushMap(adSetsByCampaign, campaignId, adSet.id);
+  }
+
+  const adsByAdSet = new Map<string, string[]>();
+  for (const ad of ads) {
+    const adSetId = preferredAdSetByAd.get(ad.id);
+    if (!adSetId) continue;
+    pushMap(adsByAdSet, adSetId, ad.id);
+  }
+
+  for (const [key, value] of adSetsByCampaign) adSetsByCampaign.set(key, uniqueSorted(value));
+  for (const [key, value] of adsByAdSet) adsByAdSet.set(key, uniqueSorted(value));
+
   const placed = new Set<string>();
+  let cursorY = START_Y;
 
-  const layoutAdSetSubtree = (adSetId: string, startY: number): number => {
+  const placeAdSubtree = (adSetId: string, startY: number): number => {
     const adSet = byId.get(adSetId);
     if (!adSet || adSet.type !== 'adset') return 0;
 
     const adIds = (adsByAdSet.get(adSetId) ?? []).filter(id => byId.get(id)?.type === 'ad' && !placed.has(id));
+
     if (adIds.length === 0) {
-      pos.set(adSet.id, { x: COL_X.adset, y: startY });
+      positions.set(adSet.id, { x: COL_X.adset, y: startY });
       placed.add(adSet.id);
-      return NODE_HEIGHT.adset;
+      return nodeSpan('adset');
     }
 
-    let adCursor = startY;
+    let adCursorY = startY;
     for (const adId of adIds) {
-      pos.set(adId, { x: COL_X.ad, y: adCursor });
+      positions.set(adId, { x: COL_X.ad, y: adCursorY });
       placed.add(adId);
-      adCursor += NODE_HEIGHT.ad + ROW_GAP;
+      adCursorY += nodeSpan('ad') + LANE_METRICS.ad.rowGap;
     }
 
-    const adsSpan = adCursor - startY - ROW_GAP;
-    const adSetY = startY + Math.max(0, adsSpan - NODE_HEIGHT.adset) / 2;
-    pos.set(adSet.id, { x: COL_X.adset, y: adSetY });
+    const adsSpan = adCursorY - startY - LANE_METRICS.ad.rowGap;
+    const adSetY = startY + Math.max(0, (adsSpan - nodeSpan('adset')) / 2);
+    positions.set(adSet.id, { x: COL_X.adset, y: adSetY });
     placed.add(adSet.id);
 
-    return Math.max(NODE_HEIGHT.adset, adsSpan);
+    return Math.max(nodeSpan('adset'), adsSpan);
   };
 
   for (const campaign of campaigns) {
@@ -105,48 +144,49 @@ export const buildHierarchyLayout = (
       .filter(id => byId.get(id)?.type === 'adset' && !placed.has(id));
 
     if (childAdSetIds.length === 0) {
-      pos.set(campaign.id, { x: COL_X.campaign, y: cursorY });
+      positions.set(campaign.id, { x: COL_X.campaign, y: cursorY });
       placed.add(campaign.id);
-      cursorY += NODE_HEIGHT.campaign + GROUP_GAP;
+      cursorY += nodeSpan('campaign') + GROUP_BASE_GAP;
       continue;
     }
 
-    let adSetCursor = cursorY;
+    let adSetCursorY = cursorY;
     for (const adSetId of childAdSetIds) {
-      const used = layoutAdSetSubtree(adSetId, adSetCursor);
-      adSetCursor += used + ADSET_GAP;
+      const subtreeSpan = placeAdSubtree(adSetId, adSetCursorY);
+      adSetCursorY += subtreeSpan + SUBTREE_GAP;
     }
 
-    const groupSpan = adSetCursor - cursorY - ADSET_GAP;
-    const campaignY = cursorY + Math.max(0, groupSpan - NODE_HEIGHT.campaign) / 2;
-    pos.set(campaign.id, { x: COL_X.campaign, y: campaignY });
+    const groupSpan = adSetCursorY - cursorY - SUBTREE_GAP;
+    const campaignY = cursorY + Math.max(0, (groupSpan - nodeSpan('campaign')) / 2);
+    positions.set(campaign.id, { x: COL_X.campaign, y: campaignY });
     placed.add(campaign.id);
 
-    cursorY += Math.max(NODE_HEIGHT.campaign, groupSpan) + GROUP_GAP;
+    const densityGap = GROUP_DENSITY_GAP * Math.min(3, childAdSetIds.length - 1);
+    cursorY += Math.max(nodeSpan('campaign'), groupSpan) + GROUP_BASE_GAP + densityGap;
   }
 
-  // Orphan Ad Sets (with or without Ads)
-  for (const adSet of adSets) {
-    if (placed.has(adSet.id)) continue;
-    const used = layoutAdSetSubtree(adSet.id, cursorY);
-    cursorY += (used || NODE_HEIGHT.adset) + GROUP_GAP;
+  // Orphan Ad Set block
+  const orphanAdSets = adSets.filter(adSet => !placed.has(adSet.id));
+  for (const adSet of orphanAdSets) {
+    const span = placeAdSubtree(adSet.id, cursorY);
+    cursorY += Math.max(nodeSpan('adset'), span) + GROUP_BASE_GAP;
   }
 
-  // Orphan Ads
-  for (const ad of ads) {
-    if (placed.has(ad.id)) continue;
-    pos.set(ad.id, { x: COL_X.ad, y: cursorY });
+  // Orphan Ads block
+  const orphanAds = ads.filter(ad => !placed.has(ad.id));
+  for (const ad of orphanAds) {
+    positions.set(ad.id, { x: COL_X.ad, y: cursorY });
     placed.add(ad.id);
-    cursorY += NODE_HEIGHT.ad + ROW_GAP;
+    cursorY += nodeSpan('ad') + LANE_METRICS.ad.rowGap;
   }
 
-  // Any leftovers (defensive, deterministic)
+  // Defensive deterministic fallback for any remaining elements.
   for (const el of sortElements(elements)) {
     if (placed.has(el.id)) continue;
-    pos.set(el.id, { x: COL_X[el.type], y: cursorY });
+    positions.set(el.id, { x: COL_X[el.type], y: cursorY });
     placed.add(el.id);
-    cursorY += NODE_HEIGHT[el.type] + ROW_GAP;
+    cursorY += nodeSpan(el.type) + LANE_METRICS[el.type].rowGap;
   }
 
-  return pos;
+  return positions;
 };

@@ -70,7 +70,8 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
           <Handle
             type="target"
             position={Position.Left}
-            className="!w-3 !h-3 !bg-muted-foreground/50 !border-2 !border-background"
+            className="!w-3.5 !h-3.5 !bg-muted-foreground/65 !border-2 !border-background !shadow-sm"
+            style={{ top: '50%' }}
           />
         </div>
       </CanvasContextMenu>
