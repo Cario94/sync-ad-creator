@@ -420,6 +420,22 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     },
   }), []);
 
+
+  const viewportModel = useMemo(() => ({
+    // Trackpad / wheel: default to panning for two-finger scroll.
+    panOnScroll: true,
+    panOnScrollMode: PanOnScrollMode.Free,
+    // Slightly faster than default for more responsive desktop navigation.
+    panOnScrollSpeed: 1.1,
+    // Keep zoom available, but make it intentional to avoid accidental zoom while panning.
+    zoomOnScroll: true,
+    zoomActivationKeyCode: ['Meta', 'Control'] as const,
+    zoomOnPinch: true,
+    // Reduce extreme zoom ranges for steadier navigation context.
+    minZoom: 0.35,
+    maxZoom: 2,
+  }), []);
+
   const interactionModel = useMemo(() => ({
     // Primary desktop behavior: drag empty space to pan.
     panOnDrag: true as const,
@@ -456,14 +472,15 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             multiSelectionKeyCode={interactionModel.multiSelectionKeyCode}
             panOnDrag={interactionModel.panOnDrag}
             panActivationKeyCode={interactionModel.panActivationKeyCode}
-            panOnScroll
-            panOnScrollMode={PanOnScrollMode.Free}
-            panOnScrollSpeed={0.75}
-            zoomOnScroll={false}
-            zoomOnPinch
+            panOnScroll={viewportModel.panOnScroll}
+            panOnScrollMode={viewportModel.panOnScrollMode}
+            panOnScrollSpeed={viewportModel.panOnScrollSpeed}
+            zoomOnScroll={viewportModel.zoomOnScroll}
+            zoomActivationKeyCode={viewportModel.zoomActivationKeyCode}
+            zoomOnPinch={viewportModel.zoomOnPinch}
             zoomOnDoubleClick={false}
-            minZoom={0.2}
-            maxZoom={2.5}
+            minZoom={viewportModel.minZoom}
+            maxZoom={viewportModel.maxZoom}
             connectionRadius={24}
             snapToGrid
             snapGrid={SNAP_GRID}
