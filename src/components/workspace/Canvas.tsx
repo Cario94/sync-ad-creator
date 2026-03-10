@@ -21,6 +21,7 @@ import {
   SelectionMode,
   Panel,
   ConnectionLineType,
+  PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -474,7 +475,14 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const defaultEdgeOptions = useMemo(() => ({
     type: 'smoothstep',
     markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: { strokeWidth: 2, stroke: 'hsl(var(--muted-foreground) / 0.55)' },
+    style: {
+      strokeWidth: 2,
+      stroke: 'hsl(var(--muted-foreground) / 0.62)',
+      strokeLinecap: 'round' as const,
+      strokeLinejoin: 'round' as const,
+    },
+    pathOptions: { borderRadius: 18, offset: 16 },
+    interactionWidth: 26,
   }), []);
 
   return (
@@ -492,21 +500,29 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             defaultEdgeOptions={defaultEdgeOptions}
             connectionLineType={ConnectionLineType.SmoothStep}
             connectionLineStyle={{ strokeWidth: 2, stroke: 'hsl(var(--primary))' }}
-            snapToGrid
-            snapGrid={SNAP_GRID}
             fitView={false}
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
             selectNodesOnDrag={false}
-            panOnDrag={[1, 2]}
             selectionOnDrag
-            deleteKeyCode={null}
+            selectionKeyCode="Shift"
             multiSelectionKeyCode="Shift"
+            panOnDrag={[1]}
+            panActivationKeyCode="Space"
+            panOnScroll
+            panOnScrollMode={PanOnScrollMode.Free}
+            panOnScrollSpeed={0.75}
             zoomOnScroll={false}
             zoomOnPinch
-            panOnScroll
-            minZoom={0.15}
-            maxZoom={3}
+            zoomOnDoubleClick={false}
+            minZoom={0.2}
+            maxZoom={2.5}
+            connectionRadius={24}
+            snapToGrid
+            snapGrid={SNAP_GRID}
+            nodeDragThreshold={1}
+            deleteKeyCode={null}
+            elevateEdgesOnSelect
             proOptions={{ hideAttribution: true }}
           >
             <Background
