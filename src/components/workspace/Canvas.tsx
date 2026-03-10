@@ -4,15 +4,16 @@ import {
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   addEdge,
+  applyNodeChanges,
+  applyEdgeChanges,
   type Connection as RFConnection,
   type Edge,
   type Node,
   type OnNodesChange,
   type OnEdgesChange,
   type NodeTypes,
+  type EdgeTypes,
   MarkerType,
   BackgroundVariant,
   useReactFlow,
@@ -20,7 +21,6 @@ import {
   type Viewport,
   SelectionMode,
   Panel,
-  ConnectionLineType,
   PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -28,11 +28,7 @@ import '@xyflow/react/dist/style.css';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { CanvasElement } from './types/canvas';
-import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
-import {
-  workspaceElementsToReactFlowNodes,
-  workspaceConnectionsToReactFlowEdges,
-} from '@/lib/workspaceGraphMapper';
+import type { WorkspaceFlowNodeData } from '@/lib/workspaceGraphMapper';
 import { buildHierarchyLayout } from '@/lib/workspaceLayout';
 import { toast } from 'sonner';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -42,6 +38,8 @@ import CanvasContextMenu from './CanvasContextMenu';
 import CampaignNode from './nodes/CampaignNode';
 import AdSetNode from './nodes/AdSetNode';
 import AdNode from './nodes/AdNode';
+import WorkspaceEdge from './edges/WorkspaceEdge';
+import WorkspaceConnectionLine from './edges/WorkspaceConnectionLine';
 
 interface CanvasProps {
   className?: string;
@@ -75,6 +73,10 @@ const nodeTypes: NodeTypes = {
   ad: AdNode,
 };
 
+const edgeTypes: EdgeTypes = {
+  workspace: WorkspaceEdge,
+};
+
 const SNAP_GRID: [number, number] = [25, 25];
 
 const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
@@ -82,16 +84,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   onSave,
 }, ref) => {
   const {
-    elements, connections, setElements, setConnections,
+    nodes, edges, setNodes, setEdges, elements, connections,
     selectedElementIds, setSelectedElementIds,
     markDirty, addCampaign, addAdSet, addAd, viewportRef,
     undo, redo, pushSnapshot,
   } = useWorkspace();
 
   const { fitView, setViewport } = useReactFlow();
-
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -107,9 +106,18 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   // Callbacks for node data
   const handleEditElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
     pushSnapshot();
-    setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el));
+    setNodes(prev => prev.map(node => node.id === id
+      ? {
+        ...node,
+        data: {
+          ...node.data,
+          label: updates.name ?? node.data.label,
+          config: updates.config ?? node.data.config,
+        },
+      }
+      : node));
     markDirty();
-  }, [pushSnapshot, setElements, markDirty]);
+  }, [pushSnapshot, setNodes, markDirty]);
 
   // Cascade ID collection
   const collectCascadeIds = useCallback((ids: string[], currentElements: CanvasElement[]): Set<string> => {
@@ -140,20 +148,15 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const executeDelete = useCallback((ids: string[]) => {
     pushSnapshot();
     const currentEls = elementsRef.current;
-    const currentConns = connectionsRef.current;
     const idsToRemove = collectCascadeIds(ids, currentEls);
 
-    const newConns = currentConns.filter(
-      c => !idsToRemove.has(c.sourceId) && !idsToRemove.has(c.targetId)
-    );
-    const newEls = currentEls.filter(el => !idsToRemove.has(el.id));
-
-    setElements(newEls);
-    setConnections(newConns);
+    const removeSet = idsToRemove;
+    setNodes(prev => prev.filter(node => !removeSet.has(node.id)));
+    setEdges(prev => prev.filter(edge => !removeSet.has(edge.source) && !removeSet.has(edge.target)));
     markDirty();
     setSelectedElementIds(prev => prev.filter(eid => !idsToRemove.has(eid)));
     toast.success(`Deleted ${idsToRemove.size} element${idsToRemove.size > 1 ? 's' : ''}`);
-  }, [collectCascadeIds, setConnections, setElements, markDirty, setSelectedElementIds, pushSnapshot]);
+  }, [collectCascadeIds, setNodes, setEdges, markDirty, setSelectedElementIds, pushSnapshot]);
 
   const requestDelete = useCallback((ids: string[]) => {
     const currentEls = elementsRef.current;
@@ -185,10 +188,16 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       position: { x: source.position.x + 30, y: source.position.y + 30 },
       config: source.config ? JSON.parse(JSON.stringify(source.config)) : {},
     };
-    setElements(prev => [...prev, newElement]);
+    const duplicatedNode: Node<WorkspaceFlowNodeData> = {
+      id: newElement.id,
+      type: newElement.type,
+      position: newElement.position,
+      data: { label: newElement.name, config: newElement.config ?? {}, elementId: newElement.id },
+    };
+    setNodes(prev => [...prev, duplicatedNode]);
     markDirty();
     toast.success(`Duplicated ${source.type}`);
-  }, [pushSnapshot, markDirty, setElements]);
+  }, [pushSnapshot, markDirty, setNodes]);
 
   const campaigns = useMemo(() =>
     elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
@@ -198,22 +207,18 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     elements.filter(el => el.type === 'adset').map(el => ({ id: el.id, name: el.name })),
   [elements]);
 
-  // Sync workspace elements → React Flow nodes
-  useEffect(() => {
-    const rfNodes = workspaceElementsToReactFlowNodes(elements, {
+
+  const renderNodes = useMemo(() => nodes.map(node => ({
+    ...node,
+    data: {
+      ...node.data,
       onEdit: handleEditElement,
       onDelete: handleDeleteElement,
       onDuplicate: handleDuplicateElement,
       campaigns,
       adSets,
-    });
-    setNodes(rfNodes);
-  }, [elements, campaigns, adSets, handleEditElement, handleDeleteElement, handleDuplicateElement]);
-
-  // Sync workspace connections → React Flow edges
-  useEffect(() => {
-    setEdges(workspaceConnectionsToReactFlowEdges(connections));
-  }, [connections]);
+    },
+  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, campaigns, adSets]);
 
   // Hydrate viewport from saved state once nodes are ready
   const viewportRestoredRef = useRef(false);
@@ -227,32 +232,16 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
 
-  // Handle node position changes → sync back to workspace
+  // Handle node changes (React Flow is the live editing source-of-truth)
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
-    onNodesChange(changes);
+    setNodes(prev => applyNodeChanges(changes, prev));
 
-    // Check for position changes (drag end)
-    const positionChanges = changes.filter(
-      c => c.type === 'position' && c.dragging === false && c.position
-    );
-    if (positionChanges.length > 0) {
+    const hasPositionChange = changes.some(c => c.type === 'position' && c.position);
+    if (hasPositionChange) {
       pushSnapshot();
-      setElements(prev => {
-        const updated = [...prev];
-        for (const change of positionChanges) {
-          if (change.type === 'position' && change.position) {
-            const idx = updated.findIndex(el => el.id === change.id);
-            if (idx !== -1) {
-              updated[idx] = { ...updated[idx], position: change.position };
-            }
-          }
-        }
-        return updated;
-      });
       markDirty();
     }
 
-    // Handle selection changes
     const selectionChanges = changes.filter(c => c.type === 'select');
     if (selectionChanges.length > 0) {
       setSelectedElementIds(prev => {
@@ -269,21 +258,19 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
         return next;
       });
     }
-  }, [onNodesChange, pushSnapshot, setElements, markDirty, setSelectedElementIds]);
+  }, [setNodes, pushSnapshot, markDirty, setSelectedElementIds]);
 
   // Handle edge changes
   const handleEdgesChange: OnEdgesChange = useCallback((changes) => {
-    onEdgesChange(changes);
+    setEdges(prev => applyEdgeChanges(changes, prev));
 
     // Handle edge removals
     const removals = changes.filter(c => c.type === 'remove');
     if (removals.length > 0) {
       pushSnapshot();
-      const removedIds = new Set(removals.map(c => c.id));
-      setConnections(prev => prev.filter(c => !removedIds.has(c.id)));
       markDirty();
     }
-  }, [onEdgesChange, pushSnapshot, setConnections, markDirty]);
+  }, [setEdges, pushSnapshot, markDirty]);
 
   // Handle new connections
   const handleConnect = useCallback((connection: RFConnection) => {
@@ -311,27 +298,20 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       source: connection.source!,
       target: connection.target!,
-      type: 'smoothstep',
-      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-      style: { strokeWidth: 2 },
+      type: 'workspace',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: 'hsl(var(--muted-foreground) / 0.8)',
+      },
     };
 
     setEdges(prev => addEdge(newEdge, prev));
 
-    // Sync to workspace
-    const sourceNode = nodes.find(n => n.id === connection.source);
-    const targetNode = nodes.find(n => n.id === connection.target);
-    const newConn: Connection = {
-      id: newEdge.id,
-      sourceId: connection.source!,
-      targetId: connection.target!,
-      sourceType: (sourceNode?.type as Connection['sourceType']) ?? 'campaign',
-      targetType: (targetNode?.type as Connection['targetType']) ?? 'adset',
-    };
-    setConnections(prev => [...prev, newConn]);
     markDirty();
     toast.success('Connection created');
-  }, [nodes, edges, pushSnapshot, setEdges, setConnections, markDirty]);
+  }, [nodes, edges, pushSnapshot, setEdges, markDirty]);
 
   // Connection validator for React Flow
   const isValidConnectionFn = useCallback((connection: RFConnection) => {
@@ -349,18 +329,16 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
     const posMap = buildHierarchyLayout(elementsRef.current, connectionsRef.current);
 
-    const newElements = elementsRef.current.map(el => {
-      const pos = posMap.get(el.id);
-      return pos ? { ...el, position: pos } : { ...el };
-    });
-
-    setElements(newElements);
+    setNodes(prev => prev.map(node => {
+      const pos = posMap.get(node.id);
+      return pos ? { ...node, position: pos } : node;
+    }));
     markDirty();
 
     // Fit view after layout
     requestAnimationFrame(() => fitView({ padding: 0.15, duration: 300 }));
     toast.success('Layout organized successfully');
-  }, [pushSnapshot, setElements, markDirty, fitView]);
+  }, [pushSnapshot, setNodes, markDirty, fitView]);
 
   React.useImperativeHandle(ref, () => ({
     tidyLayout,
@@ -401,50 +379,76 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   }, [pendingDeleteIds, executeDelete]);
 
   const defaultEdgeOptions = useMemo(() => ({
-    type: 'smoothstep',
-    markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: {
-      strokeWidth: 2,
-      stroke: 'hsl(var(--muted-foreground) / 0.62)',
-      strokeLinecap: 'round' as const,
-      strokeLinejoin: 'round' as const,
+    type: 'workspace',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: 'hsl(var(--muted-foreground) / 0.8)',
     },
-    pathOptions: { borderRadius: 18, offset: 16 },
-    interactionWidth: 26,
+  }), []);
+
+
+  const viewportModel = useMemo(() => ({
+    // Trackpad / wheel: default to panning for two-finger scroll.
+    panOnScroll: true,
+    panOnScrollMode: PanOnScrollMode.Free,
+    // Slightly faster than default for more responsive desktop navigation.
+    panOnScrollSpeed: 1.1,
+    // Keep zoom available, but make it intentional to avoid accidental zoom while panning.
+    zoomOnScroll: true,
+    zoomActivationKeyCode: ['Meta', 'Control'] as const,
+    zoomOnPinch: true,
+    // Reduce extreme zoom ranges for steadier navigation context.
+    minZoom: 0.35,
+    maxZoom: 2,
+  }), []);
+
+  const interactionModel = useMemo(() => ({
+    // Primary desktop behavior: drag empty space to pan.
+    panOnDrag: true as const,
+    // Keep marquee selection explicit so it doesn't conflict with panning.
+    selectionOnDrag: false,
+    // Use one modifier model for range-select and additive selection.
+    selectionKeyCode: 'Shift' as const,
+    multiSelectionKeyCode: 'Shift' as const,
+    // Keep middle-mouse panning available as an alternative muscle memory.
+    panActivationKeyCode: 'Space' as const,
   }), []);
 
   return (
     <div className={`w-full h-full ${className}`}>
       <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
-        <div className="w-full h-full">
+        <div className="w-full h-full workspace-flow">
           <ReactFlow
-            nodes={nodes}
+            nodes={renderNodes}
             edges={edges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
             isValidConnection={isValidConnectionFn}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
-            connectionLineType={ConnectionLineType.SmoothStep}
-            connectionLineStyle={{ strokeWidth: 2, stroke: 'hsl(var(--primary))' }}
+            connectionLineComponent={WorkspaceConnectionLine}
             fitView={false}
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
             selectNodesOnDrag={false}
-            selectionOnDrag
-            selectionKeyCode="Shift"
-            multiSelectionKeyCode="Shift"
-            panOnDrag={[1]}
-            panActivationKeyCode="Space"
-            panOnScroll
-            panOnScrollMode={PanOnScrollMode.Free}
-            panOnScrollSpeed={0.75}
-            zoomOnScroll={false}
-            zoomOnPinch
+            selectionOnDrag={interactionModel.selectionOnDrag}
+            selectionKeyCode={interactionModel.selectionKeyCode}
+            multiSelectionKeyCode={interactionModel.multiSelectionKeyCode}
+            panOnDrag={interactionModel.panOnDrag}
+            panActivationKeyCode={interactionModel.panActivationKeyCode}
+            panOnScroll={viewportModel.panOnScroll}
+            panOnScrollMode={viewportModel.panOnScrollMode}
+            panOnScrollSpeed={viewportModel.panOnScrollSpeed}
+            zoomOnScroll={viewportModel.zoomOnScroll}
+            zoomActivationKeyCode={viewportModel.zoomActivationKeyCode}
+            zoomOnPinch={viewportModel.zoomOnPinch}
             zoomOnDoubleClick={false}
-            minZoom={0.2}
-            maxZoom={2.5}
+            minZoom={viewportModel.minZoom}
+            maxZoom={viewportModel.maxZoom}
             connectionRadius={24}
             snapToGrid
             snapGrid={SNAP_GRID}

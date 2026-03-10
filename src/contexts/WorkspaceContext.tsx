@@ -1,9 +1,17 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
+import type { Edge, Node } from '@xyflow/react';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
 import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
+import {
+  reactFlowEdgesToWorkspaceConnections,
+  reactFlowNodesToWorkspaceElements,
+  workspaceConnectionsToReactFlowEdges,
+  workspaceElementsToFlowNodes,
+  type WorkspaceFlowNodeData,
+} from '@/lib/workspaceGraphMapper';
 import { projectsService } from '@/services/projects';
 import { activityLogsService } from '@/services/activityLogs';
 import { toast } from 'sonner';
@@ -13,8 +21,8 @@ import { toast } from 'sonner';
 const MAX_HISTORY = 50;
 
 interface Snapshot {
-  elements: CanvasElement[];
-  connections: Connection[];
+  nodes: Node<WorkspaceFlowNodeData>[];
+  edges: Edge[];
 }
 
 // ── Types ──
@@ -27,10 +35,13 @@ export interface WorkspaceState {
   saveStatus: SaveStatus;
   save: () => Promise<void>;
 
+  nodes: Node<WorkspaceFlowNodeData>[];
+  edges: Edge[];
+  setNodes: React.Dispatch<React.SetStateAction<Node<WorkspaceFlowNodeData>[]>>;
+  setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
+
   elements: CanvasElement[];
   connections: Connection[];
-  setElements: React.Dispatch<React.SetStateAction<CanvasElement[]>>;
-  setConnections: React.Dispatch<React.SetStateAction<Connection[]>>;
 
   markDirty: () => void;
 
@@ -84,9 +95,9 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     save: rawSave, saveStatus, markDirty,
   } = useProjectDocument(paramProjectId);
 
-  // ── Source-of-truth state ──
-  const [elements, setElements] = useState<CanvasElement[]>([]);
-  const [connections, setConnections] = useState<Connection[]>([]);
+  // ── Source-of-truth state (React Flow-native during editing) ──
+  const [nodes, setNodes] = useState<Node<WorkspaceFlowNodeData>[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [projectName, setProjectName] = useState('');
   const viewportRef = useRef({ x: 0, y: 0, zoom: 1 });
@@ -112,14 +123,17 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   useEffect(() => {
     if (!documentState) return;
     hydratedRef.current = false;
-    setElements(documentState.elements);
-    setConnections(documentState.connections);
+    const hydratedNodes = workspaceElementsToFlowNodes(documentState.elements);
+    const hydratedEdges = workspaceConnectionsToReactFlowEdges(documentState.connections);
+
+    setNodes(hydratedNodes);
+    setEdges(hydratedEdges);
     viewportRef.current = documentState.viewport;
 
     // Seed history with initial state
     const initial: Snapshot = {
-      elements: documentState.elements,
-      connections: documentState.connections,
+      nodes: hydratedNodes,
+      edges: hydratedEdges,
     };
     historyRef.current = [initial];
     historyIndexRef.current = 0;
@@ -127,6 +141,9 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
 
     requestAnimationFrame(() => { hydratedRef.current = true; });
   }, [documentState]);
+
+  const elements = useMemo(() => reactFlowNodesToWorkspaceElements(nodes), [nodes]);
+  const connections = useMemo(() => reactFlowEdgesToWorkspaceConnections(edges, nodes), [edges, nodes]);
 
   // ── Dirty tracking ──
   const smartMarkDirty = useCallback(() => {
@@ -145,20 +162,24 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     if (user && projectId) {
       activityLogsService.canvasSaved(user.id, projectId, version);
     }
-  }, [elements, connections, rawSave, user, projectId]);
+  }, [elements, connections, rawSave, user, projectId, version]);
 
   // ── History helpers (use refs for latest state) ──
-  const elementsRef = useRef(elements);
-  elementsRef.current = elements;
-  const connectionsRef = useRef(connections);
-  connectionsRef.current = connections;
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
 
   /** Capture current state as a snapshot (call BEFORE mutating) */
   const pushSnapshot = useCallback(() => {
     if (!hydratedRef.current) return;
     const snapshot: Snapshot = {
-      elements: elementsRef.current.map(e => ({ ...e, config: e.config ? { ...e.config } : {} })),
-      connections: [...connectionsRef.current],
+      nodes: nodesRef.current.map(n => ({
+        ...n,
+        position: { ...n.position },
+        data: n.data ? { ...n.data, config: n.data.config ? { ...n.data.config } : {} } : undefined,
+      })),
+      edges: edgesRef.current.map(e => ({ ...e, data: e.data ? { ...e.data } : undefined })),
     };
     const idx = historyIndexRef.current;
     // Trim any forward history
@@ -171,10 +192,10 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   }, []);
 
   const applySnapshot = useCallback((snapshot: Snapshot) => {
-    setElements(snapshot.elements);
-    setConnections(snapshot.connections);
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
     smartMarkDirty();
-  }, [smartMarkDirty, setElements, setConnections]);
+  }, [smartMarkDirty]);
 
   const undo = useCallback(() => {
     if (historyIndexRef.current <= 0) {
@@ -184,8 +205,12 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     // Save current state as forward history if we're at the tip
     if (historyIndexRef.current === historyRef.current.length - 1) {
       const current: Snapshot = {
-        elements: elementsRef.current.map(e => ({ ...e, config: e.config ? { ...e.config } : {} })),
-        connections: [...connectionsRef.current],
+        nodes: nodesRef.current.map(n => ({
+          ...n,
+          position: { ...n.position },
+          data: n.data ? { ...n.data, config: n.data.config ? { ...n.data.config } : {} } : undefined,
+        })),
+        edges: edgesRef.current.map(e => ({ ...e, data: e.data ? { ...e.data } : undefined })),
       };
       // Replace the tip with current state (in case it changed since last push)
       historyRef.current[historyIndexRef.current] = current;
@@ -207,30 +232,33 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     toast.info('Redo');
   }, [applySnapshot]);
 
-  const canUndo = historyIndexRef.current > 0;
-  const canRedo = historyIndexRef.current < historyRef.current.length - 1;
+  const canUndo = useMemo(() => historyIndexRef.current > 0, [historyTrigger]);
+  const canRedo = useMemo(() => historyIndexRef.current < historyRef.current.length - 1, [historyTrigger]);
 
   // ── Element CRUD (all push snapshot before mutating) ──
 
   const addElement = useCallback((element: CanvasElement) => {
     pushSnapshot();
     const el: CanvasElement = { ...element, config: element.config ?? {} };
-    setElements(prev => [...prev, el]);
+    const node = workspaceElementsToFlowNodes([el])[0];
+    setNodes(prev => [...prev, node]);
     setSelectedElementIds([el.id]);
     smartMarkDirty();
   }, [smartMarkDirty, pushSnapshot]);
 
   const updateElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
     pushSnapshot();
-    setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el));
+    setNodes(prev => prev.map(node => node.id === id
+      ? { ...node, data: { ...node.data, label: updates.name ?? node.data.label, config: updates.config ?? node.data.config } }
+      : node));
     smartMarkDirty();
   }, [smartMarkDirty, pushSnapshot]);
 
   const removeElements = useCallback((ids: string[]) => {
     pushSnapshot();
     const idSet = new Set(ids);
-    setElements(prev => prev.filter(el => !idSet.has(el.id)));
-    setConnections(prev => prev.filter(c => !idSet.has(c.sourceId) && !idSet.has(c.targetId)));
+    setNodes(prev => prev.filter(node => !idSet.has(node.id)));
+    setEdges(prev => prev.filter(edge => !idSet.has(edge.source) && !idSet.has(edge.target)));
     setSelectedElementIds(prev => prev.filter(id => !idSet.has(id)));
     smartMarkDirty();
   }, [smartMarkDirty, pushSnapshot]);
@@ -248,24 +276,26 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
 
   const addCampaign = useCallback(() => {
     pushSnapshot();
-    setElements(prev => {
+    setNodes(prev => {
+      const existing = reactFlowNodesToWorkspaceElements(prev);
       const element: CanvasElement = {
         id: generateId('campaign'),
         type: 'campaign',
-        name: `Campaign ${prev.filter(e => e.type === 'campaign').length + 1}`,
-        position: findOpenPosition('campaign', prev),
+        name: `Campaign ${existing.filter(e => e.type === 'campaign').length + 1}`,
+        position: findOpenPosition('campaign', existing),
         config: defaultCampaignConfig() as unknown as Record<string, unknown>,
       };
       smartMarkDirty();
       setSelectedElementIds([element.id]);
       toast.success('Campaign created');
-      return [...prev, element];
+      return [...prev, workspaceElementsToFlowNodes([element])[0]];
     });
   }, [findOpenPosition, smartMarkDirty, pushSnapshot]);
 
   const addAdSet = useCallback(() => {
-    setElements(prev => {
-      const campaigns = prev.filter(e => e.type === 'campaign');
+    setNodes(prev => {
+      const existing = reactFlowNodesToWorkspaceElements(prev);
+      const campaigns = existing.filter(e => e.type === 'campaign');
       if (campaigns.length === 0) {
         toast.error('Create a Campaign first', { description: 'Ad Sets must belong to a Campaign.' });
         return prev;
@@ -274,20 +304,21 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
       const element: CanvasElement = {
         id: generateId('adset'),
         type: 'adset',
-        name: `Ad Set ${prev.filter(e => e.type === 'adset').length + 1}`,
-        position: findOpenPosition('adset', prev),
+        name: `Ad Set ${existing.filter(e => e.type === 'adset').length + 1}`,
+        position: findOpenPosition('adset', existing),
         config: defaultAdSetConfig() as unknown as Record<string, unknown>,
       };
       smartMarkDirty();
       setSelectedElementIds([element.id]);
       toast.success('Ad Set created');
-      return [...prev, element];
+      return [...prev, workspaceElementsToFlowNodes([element])[0]];
     });
   }, [findOpenPosition, smartMarkDirty, pushSnapshot]);
 
   const addAd = useCallback(() => {
-    setElements(prev => {
-      const adSets = prev.filter(e => e.type === 'adset');
+    setNodes(prev => {
+      const existing = reactFlowNodesToWorkspaceElements(prev);
+      const adSets = existing.filter(e => e.type === 'adset');
       if (adSets.length === 0) {
         toast.error('Create an Ad Set first', { description: 'Ads must belong to an Ad Set.' });
         return prev;
@@ -296,20 +327,21 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
       const element: CanvasElement = {
         id: generateId('ad'),
         type: 'ad',
-        name: `Ad ${prev.filter(e => e.type === 'ad').length + 1}`,
-        position: findOpenPosition('ad', prev),
+        name: `Ad ${existing.filter(e => e.type === 'ad').length + 1}`,
+        position: findOpenPosition('ad', existing),
         config: defaultAdConfig() as unknown as Record<string, unknown>,
       };
       smartMarkDirty();
       setSelectedElementIds([element.id]);
       toast.success('Ad created');
-      return [...prev, element];
+      return [...prev, workspaceElementsToFlowNodes([element])[0]];
     });
   }, [findOpenPosition, smartMarkDirty, pushSnapshot]);
 
   const value: WorkspaceState = {
     projectId, projectName, isLoading, error, saveStatus, save,
-    elements, connections, setElements, setConnections,
+    nodes, edges, setNodes, setEdges,
+    elements, connections,
     markDirty: smartMarkDirty,
     selectedElementIds, setSelectedElementIds,
     addElement, updateElement, removeElements,
