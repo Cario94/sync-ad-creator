@@ -178,6 +178,8 @@
 
 .react-flow__controls-button {
   @apply bg-transparent border-none text-foreground hover:bg-muted;
+  width: 28px;
+  height: 28px;
 }
 
 .react-flow__controls-button svg {
@@ -188,13 +190,19 @@
   @apply bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-md;
 }
 
+.react-flow__minimap-mask {
+  fill: hsl(var(--background) / 0.7);
+}
+
 .react-flow__edge-path {
   stroke: hsl(var(--muted-foreground) / 0.55);
+  transition: stroke 0.15s ease;
 }
 
 .react-flow__edge:hover .react-flow__edge-path,
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: hsl(var(--primary));
+  stroke-width: 2.5;
 }
 
 .react-flow__handle {
@@ -211,9 +219,21 @@
 }
 
 .react-flow__selection {
-  @apply bg-primary/10 border-2 border-primary;
+  @apply bg-primary/10 border-2 border-primary rounded;
 }
 
 .react-flow__panel {
-  @apply m-0;
+  @apply m-2;
+}
+
+.react-flow__node {
+  transition: box-shadow 0.15s ease;
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane:active {
+  cursor: grabbing;
 }

@@ -13,7 +13,6 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type NodeTypes,
-  type EdgeTypes,
   MarkerType,
   BackgroundVariant,
   useReactFlow,
@@ -103,7 +102,7 @@ function connectionsToEdges(connections: Connection[]): Edge[] {
     type: 'smoothstep',
     animated: false,
     markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: { strokeWidth: 2 },
+    style: { strokeWidth: 2, stroke: 'hsl(var(--muted-foreground) / 0.55)' },
     data: { sourceType: c.sourceType, targetType: c.targetType },
   }));
 }
@@ -293,12 +292,17 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     requestAnimationFrame(() => { syncingRef.current = false; });
   }, [connections]);
 
-  // Hydrate viewport from saved state on mount
+  // Hydrate viewport from saved state once nodes are ready
+  const viewportRestoredRef = useRef(false);
   useEffect(() => {
+    if (nodes.length === 0 || viewportRestoredRef.current) return;
+    viewportRestoredRef.current = true;
     const vp = viewportRef.current;
-    setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
+    requestAnimationFrame(() => {
+      setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nodes.length]);
 
   // Handle node position changes → sync back to workspace
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
@@ -572,14 +576,14 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
             selectNodesOnDrag={false}
-            panOnDrag={[0, 1, 2]}
+            panOnDrag={[1, 2]}
             selectionOnDrag
             deleteKeyCode={null}
             multiSelectionKeyCode="Shift"
-            zoomOnScroll
+            zoomOnScroll={false}
             zoomOnPinch
-            panOnScroll={false}
-            minZoom={0.25}
+            panOnScroll
+            minZoom={0.15}
             maxZoom={3}
             proOptions={{ hideAttribution: true }}
           >
@@ -588,6 +592,17 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
               gap={25}
               size={1}
               color="hsl(var(--border) / 0.5)"
+            />
+            <Controls
+              showInteractive={false}
+              position="bottom-right"
+            />
+            <MiniMap
+              position="bottom-left"
+              nodeStrokeWidth={3}
+              pannable
+              zoomable
+              maskColor="hsl(var(--background) / 0.7)"
             />
             <Panel position="top-left">
               <ValidationPanel />
