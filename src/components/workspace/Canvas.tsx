@@ -27,7 +27,7 @@ import '@xyflow/react/dist/style.css';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { CanvasElement } from './types/canvas';
-import { Connection } from '@/hooks/useConnections';
+import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
 import { toast } from 'sonner';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ValidationPanel from './ValidationPanel';

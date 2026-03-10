@@ -7,7 +7,7 @@ import {
   type AdSetConfig,
   type AdConfig,
 } from '@/components/workspace/types/canvas';
-import type { Connection } from '@/hooks/useConnections';
+import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
 
 // ── Types ──
 
