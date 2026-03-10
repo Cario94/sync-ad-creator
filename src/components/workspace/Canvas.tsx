@@ -583,7 +583,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             zoomOnScroll={false}
             zoomOnPinch
             panOnScroll
-            panOnScrollMode="free" as any
             minZoom={0.15}
             maxZoom={3}
             proOptions={{ hideAttribution: true }}
