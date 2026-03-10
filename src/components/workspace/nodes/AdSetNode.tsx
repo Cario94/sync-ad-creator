@@ -16,7 +16,6 @@ export type AdSetNodeData = {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
 };
 
 export type AdSetNodeType = Node<AdSetNodeData, 'adset'>;
@@ -37,7 +36,6 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
     <>
       <CanvasContextMenu
         onEdit={() => setDialogOpen(true)}
-        onConnect={() => data.onStartConnection(data.elementId, 'adset')}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
         elementType="adset"

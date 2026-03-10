@@ -14,21 +14,25 @@ export type ProjectInsert = TablesInsert<'projects'>;
 export type MediaAssetInsert = TablesInsert<'media_assets'>;
 export type ActivityLogInsert = TablesInsert<'activity_logs'>;
 
-// ── Canvas JSONB shape (mirrors CanvasElement from workspace types) ──
+// ── Canvas JSONB shape (React Flow / XYFlow persisted model) ──
 export interface CanvasNode {
   id: string;
   type: 'campaign' | 'adset' | 'ad';
-  name: string;
   position: { x: number; y: number };
-  config: Record<string, unknown>;
+  data?: {
+    label?: string;
+    config?: Record<string, unknown>;
+  };
 }
 
 export interface CanvasEdge {
   id: string;
-  sourceId: string;
-  targetId: string;
-  sourceType?: 'campaign' | 'adset' | 'ad';
-  targetType?: 'campaign' | 'adset' | 'ad';
+  source: string;
+  target: string;
+  data?: {
+    sourceType?: 'campaign' | 'adset' | 'ad';
+    targetType?: 'campaign' | 'adset' | 'ad';
+  };
 }
 
 export interface CanvasState {

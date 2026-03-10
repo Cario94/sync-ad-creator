@@ -4,21 +4,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { CanvasState } from '@/types/database';
 import { BLANK_CANVAS_STATE } from '@/types/database';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
+import type { WorkspaceConnection } from '@/types/workspaceGraph';
+import {
+  canvasStateToWorkspaceDocument,
+  workspaceDocumentToCanvasState,
+  type WorkspaceViewport,
+} from '@/lib/workspaceGraphMapper';
 import { toast } from 'sonner';
-
-/** Stored edge – extends the base schema edge with UI-only fields */
-export interface StoredEdge {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  sourceType?: 'campaign' | 'adset' | 'ad';
-  targetType?: 'campaign' | 'adset' | 'ad';
-}
 
 export interface ProjectDocumentState {
   elements: CanvasElement[];
-  connections: StoredEdge[];
-  viewport: { x: number; y: number; zoom: number };
+  connections: WorkspaceConnection[];
+  viewport: WorkspaceViewport;
 }
 
 export type SaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error' | 'conflict';
@@ -31,9 +28,7 @@ interface UseProjectDocumentReturn {
   error: string | null;
   save: (state: ProjectDocumentState) => Promise<void>;
   saveStatus: SaveStatus;
-  /** Call when the user makes any change to mark the document dirty */
   markDirty: () => void;
-  /** Re-fetch the document from the database (e.g. after a version conflict) */
   reload: () => void;
 }
 
@@ -49,7 +44,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Load project + document
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -74,24 +68,13 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
         if (cancelled) return;
 
         if (doc) {
-          const cs = doc.canvas_state;
-          const nodes = ((cs.nodes ?? []) as unknown as CanvasElement[]).map(n => ({
-            ...n,
-            config: n.config ?? {},
-          }));
-          setDocumentState({
-            elements: nodes,
-            connections: (cs.edges ?? []) as unknown as StoredEdge[],
-            viewport: cs.viewport ?? BLANK_CANVAS_STATE.viewport,
-          });
+          const normalized = canvasStateToWorkspaceDocument(doc.canvas_state as CanvasState);
+          setDocumentState(normalized);
           setVersion(doc.version);
           versionRef.current = doc.version;
         } else {
-          setDocumentState({
-            elements: [],
-            connections: [],
-            viewport: { ...BLANK_CANVAS_STATE.viewport },
-          });
+          const blank = canvasStateToWorkspaceDocument(BLANK_CANVAS_STATE);
+          setDocumentState(blank);
           setVersion(1);
           versionRef.current = 1;
         }
@@ -125,11 +108,7 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
 
       setSaveStatus('saving');
-      const canvasState: CanvasState = {
-        viewport: state.viewport,
-        nodes: state.elements as unknown as CanvasState['nodes'],
-        edges: state.connections as unknown as CanvasState['edges'],
-      };
+      const canvasState = workspaceDocumentToCanvasState(state);
       const newVersion = await projectDocumentsService.save(projectId, canvasState, versionRef.current);
       versionRef.current = newVersion;
       setVersion(newVersion);
@@ -153,7 +132,6 @@ export function useProjectDocument(paramProjectId?: string): UseProjectDocumentR
     }
   }, [projectId, reload]);
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProjectDocument, type ProjectDocumentState, type SaveStatus, type StoredEdge } from '@/hooks/useProjectDocument';
+import { useProjectDocument, type ProjectDocumentState, type SaveStatus } from '@/hooks/useProjectDocument';
 import type { CanvasElement } from '@/components/workspace/types/canvas';
 import { defaultCampaignConfig, defaultAdSetConfig, defaultAdConfig } from '@/components/workspace/types/canvas';
-import type { Connection } from '@/hooks/useConnections';
+import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
 import { projectsService } from '@/services/projects';
 import { activityLogsService } from '@/services/activityLogs';
 import { toast } from 'sonner';
@@ -113,13 +113,13 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
     if (!documentState) return;
     hydratedRef.current = false;
     setElements(documentState.elements);
-    setConnections(documentState.connections as Connection[]);
+    setConnections(documentState.connections);
     viewportRef.current = documentState.viewport;
 
     // Seed history with initial state
     const initial: Snapshot = {
       elements: documentState.elements,
-      connections: documentState.connections as Connection[],
+      connections: documentState.connections,
     };
     historyRef.current = [initial];
     historyIndexRef.current = 0;
@@ -137,7 +137,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ paramProje
   const save = useCallback(async () => {
     const state: ProjectDocumentState = {
       elements,
-      connections: connections as StoredEdge[],
+      connections,
       viewport: viewportRef.current,
     };
     await rawSave(state);
