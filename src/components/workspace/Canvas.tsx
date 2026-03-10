@@ -33,6 +33,7 @@ import {
   workspaceElementsToReactFlowNodes,
   workspaceConnectionsToReactFlowEdges,
 } from '@/lib/workspaceGraphMapper';
+import { buildHierarchyLayout } from '@/lib/workspaceLayout';
 import { toast } from 'sonner';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ValidationPanel from './ValidationPanel';
@@ -352,74 +353,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const tidyLayout = useCallback(() => {
     pushSnapshot();
 
-    const conns = connectionsRef.current;
-    const elMap = new Map(elementsRef.current.map(el => [el.id, el]));
-    const posMap = new Map<string, { x: number; y: number }>();
-
-    const childrenOf = new Map<string, string[]>();
-    const hasParent = new Set<string>();
-    for (const c of conns) {
-      if (!childrenOf.has(c.sourceId)) childrenOf.set(c.sourceId, []);
-      childrenOf.get(c.sourceId)!.push(c.targetId);
-      hasParent.add(c.targetId);
-    }
-
-    const roots = elementsRef.current
-      .filter(el => !hasParent.has(el.id))
-      .sort((a, b) => {
-        const order = { campaign: 0, adset: 1, ad: 2 };
-        return (order[a.type] ?? 9) - (order[b.type] ?? 9);
-      });
-
-    const COL_WIDTH = 340;
-    const ROW_GAP = 40;
-    const GROUP_GAP = 60;
-    const START_X = 100;
-    const START_Y = 100;
-    const NODE_HEIGHTS: Record<string, number> = { campaign: 140, adset: 130, ad: 120 };
-
-    let globalY = START_Y;
-    const placed = new Set<string>();
-
-    const layoutSubtree = (nodeId: string, depth: number, yStart: number): number => {
-      if (placed.has(nodeId)) return 0;
-      placed.add(nodeId);
-      const el = elMap.get(nodeId);
-      if (!el) return 0;
-
-      const children = (childrenOf.get(nodeId) || []).filter(cid => !placed.has(cid));
-      const nodeH = NODE_HEIGHTS[el.type] || 120;
-      const x = START_X + depth * COL_WIDTH;
-
-      if (children.length === 0) {
-        posMap.set(nodeId, { x, y: yStart });
-        return nodeH;
-      }
-
-      let childY = yStart;
-      for (let i = 0; i < children.length; i++) {
-        const ch = layoutSubtree(children[i], depth + 1, childY);
-        childY += ch + ROW_GAP;
-      }
-      const childrenSpan = childY - yStart - ROW_GAP;
-      const parentY = yStart + Math.max(0, childrenSpan - nodeH) / 2;
-      posMap.set(nodeId, { x, y: parentY });
-      return Math.max(nodeH, childrenSpan);
-    };
-
-    for (const root of roots) {
-      const consumed = layoutSubtree(root.id, root.type === 'campaign' ? 0 : root.type === 'adset' ? 1 : 2, globalY);
-      globalY += consumed + GROUP_GAP;
-    }
-
-    for (const el of elementsRef.current) {
-      if (!placed.has(el.id)) {
-        const depth = el.type === 'campaign' ? 0 : el.type === 'adset' ? 1 : 2;
-        posMap.set(el.id, { x: START_X + depth * COL_WIDTH, y: globalY });
-        globalY += (NODE_HEIGHTS[el.type] || 120) + ROW_GAP;
-        placed.add(el.id);
-      }
-    }
+    const posMap = buildHierarchyLayout(elementsRef.current, connectionsRef.current);
 
     const newElements = elementsRef.current.map(el => {
       const pos = posMap.get(el.id);
