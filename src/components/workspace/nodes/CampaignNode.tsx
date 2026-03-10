@@ -62,13 +62,15 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
           <Handle
             type="source"
             position={Position.Right}
-            className="!w-3 !h-3 !bg-primary !border-2 !border-primary-foreground"
+            className="!w-3.5 !h-3.5 !bg-primary !border-2 !border-background !shadow-sm"
+            style={{ top: '50%' }}
           />
           {/* Target handle on the left (for potential re-parenting) */}
           <Handle
             type="target"
             position={Position.Left}
-            className="!w-3 !h-3 !bg-primary/50 !border-2 !border-primary-foreground"
+            className="!w-3.5 !h-3.5 !bg-primary/45 !border-2 !border-background !shadow-sm"
+            style={{ top: '50%' }}
           />
         </div>
       </CanvasContextMenu>

@@ -166,10 +166,14 @@ export const workspaceConnectionsToReactFlowEdges = (connections: WorkspaceConne
     id: c.id,
     source: c.sourceId,
     target: c.targetId,
-    type: 'smoothstep',
+    type: 'workspace',
     animated: false,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: { strokeWidth: 2, stroke: 'hsl(var(--muted-foreground) / 0.55)' },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: 'hsl(var(--muted-foreground) / 0.8)',
+    },
     data: { sourceType: c.sourceType, targetType: c.targetType },
   }));
 };

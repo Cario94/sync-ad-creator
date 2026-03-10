@@ -13,6 +13,7 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type NodeTypes,
+  type EdgeTypes,
   MarkerType,
   BackgroundVariant,
   useReactFlow,
@@ -20,7 +21,6 @@ import {
   type Viewport,
   SelectionMode,
   Panel,
-  ConnectionLineType,
   PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -42,6 +42,8 @@ import CanvasContextMenu from './CanvasContextMenu';
 import CampaignNode from './nodes/CampaignNode';
 import AdSetNode from './nodes/AdSetNode';
 import AdNode from './nodes/AdNode';
+import WorkspaceEdge from './edges/WorkspaceEdge';
+import WorkspaceConnectionLine from './edges/WorkspaceConnectionLine';
 
 interface CanvasProps {
   className?: string;
@@ -73,6 +75,10 @@ const nodeTypes: NodeTypes = {
   campaign: CampaignNode,
   adset: AdSetNode,
   ad: AdNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  workspace: WorkspaceEdge,
 };
 
 const SNAP_GRID: [number, number] = [25, 25];
@@ -311,9 +317,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       source: connection.source!,
       target: connection.target!,
-      type: 'smoothstep',
-      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-      style: { strokeWidth: 2 },
+      type: 'workspace',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: 'hsl(var(--muted-foreground) / 0.8)',
+      },
     };
 
     setEdges(prev => addEdge(newEdge, prev));
@@ -401,16 +411,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   }, [pendingDeleteIds, executeDelete]);
 
   const defaultEdgeOptions = useMemo(() => ({
-    type: 'smoothstep',
-    markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: {
-      strokeWidth: 2,
-      stroke: 'hsl(var(--muted-foreground) / 0.62)',
-      strokeLinecap: 'round' as const,
-      strokeLinejoin: 'round' as const,
+    type: 'workspace',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: 'hsl(var(--muted-foreground) / 0.8)',
     },
-    pathOptions: { borderRadius: 18, offset: 16 },
-    interactionWidth: 26,
   }), []);
 
   const interactionModel = useMemo(() => ({
@@ -428,7 +435,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   return (
     <div className={`w-full h-full ${className}`}>
       <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
-        <div className="w-full h-full">
+        <div className="w-full h-full workspace-flow">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -437,9 +444,9 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             onConnect={handleConnect}
             isValidConnection={isValidConnectionFn}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
-            connectionLineType={ConnectionLineType.SmoothStep}
-            connectionLineStyle={{ strokeWidth: 2, stroke: 'hsl(var(--primary))' }}
+            connectionLineComponent={WorkspaceConnectionLine}
             fitView={false}
             onViewportChange={handleViewportChange}
             selectionMode={SelectionMode.Partial}
