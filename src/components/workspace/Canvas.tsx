@@ -102,7 +102,7 @@ function connectionsToEdges(connections: Connection[]): Edge[] {
     type: 'smoothstep',
     animated: false,
     markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: { strokeWidth: 2 },
+    style: { strokeWidth: 2, stroke: 'hsl(var(--muted-foreground) / 0.55)' },
     data: { sourceType: c.sourceType, targetType: c.targetType },
   }));
 }
