@@ -292,12 +292,17 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     requestAnimationFrame(() => { syncingRef.current = false; });
   }, [connections]);
 
-  // Hydrate viewport from saved state on mount
+  // Hydrate viewport from saved state once nodes are ready
+  const viewportRestoredRef = useRef(false);
   useEffect(() => {
+    if (nodes.length === 0 || viewportRestoredRef.current) return;
+    viewportRestoredRef.current = true;
     const vp = viewportRef.current;
-    setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
+    requestAnimationFrame(() => {
+      setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nodes.length]);
 
   // Handle node position changes → sync back to workspace
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
