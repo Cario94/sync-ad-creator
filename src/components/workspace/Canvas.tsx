@@ -234,7 +234,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
   // Handle node changes (React Flow is the live editing source-of-truth)
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
-    setNodes(prev => applyNodeChanges(changes, prev));
+    setNodes(prev => applyNodeChanges(changes, prev) as Node<WorkspaceFlowNodeData>[]);
 
     const hasPositionChange = changes.some(c => c.type === 'position' && c.position);
     if (hasPositionChange) {
