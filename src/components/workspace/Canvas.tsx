@@ -13,7 +13,6 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type NodeTypes,
-  type EdgeTypes,
   MarkerType,
   BackgroundVariant,
   useReactFlow,
