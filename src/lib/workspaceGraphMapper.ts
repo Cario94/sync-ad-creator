@@ -27,6 +27,12 @@ export interface WorkspaceCanvasNodeData {
   adSets: { id: string; name: string }[];
 }
 
+export interface WorkspaceFlowNodeData {
+  label: string;
+  config: Record<string, unknown>;
+  elementId: string;
+}
+
 type PersistedFlowNode = {
   id: string;
   type: WorkspaceNodeType;
@@ -161,6 +167,36 @@ export const workspaceElementsToReactFlowNodes = (
   }));
 };
 
+export const workspaceElementsToFlowNodes = (
+  elements: CanvasElement[],
+): Node<WorkspaceFlowNodeData>[] => {
+  return elements.map(el => ({
+    id: el.id,
+    type: el.type,
+    position: { x: el.position.x, y: el.position.y },
+    data: {
+      label: el.name,
+      config: el.config,
+      elementId: el.id,
+    },
+  }));
+};
+
+export const reactFlowNodesToWorkspaceElements = (
+  nodes: Node<WorkspaceFlowNodeData>[],
+): CanvasElement[] => {
+  return nodes.map(node => ({
+    id: node.id,
+    type: (node.type as CanvasElement['type']) ?? 'campaign',
+    name: node.data?.label ?? 'Untitled',
+    position: {
+      x: isFiniteNumber(node.position?.x) ? node.position.x : 0,
+      y: isFiniteNumber(node.position?.y) ? node.position.y : 0,
+    },
+    config: node.data?.config ?? {},
+  }));
+};
+
 export const workspaceConnectionsToReactFlowEdges = (connections: WorkspaceConnection[]): Edge[] => {
   return connections.map(c => ({
     id: c.id,
@@ -176,4 +212,21 @@ export const workspaceConnectionsToReactFlowEdges = (connections: WorkspaceConne
     },
     data: { sourceType: c.sourceType, targetType: c.targetType },
   }));
+};
+
+export const reactFlowEdgesToWorkspaceConnections = (
+  edges: Edge[],
+  nodes: Node[],
+): WorkspaceConnection[] => {
+  const typeMap = new Map(nodes.map(node => [node.id, node.type as WorkspaceNodeType]));
+
+  return edges
+    .filter(edge => edge.source && edge.target)
+    .map(edge => ({
+      id: edge.id,
+      sourceId: edge.source,
+      targetId: edge.target,
+      sourceType: (edge.data?.sourceType as WorkspaceNodeType | undefined) ?? typeMap.get(edge.source) ?? 'campaign',
+      targetType: (edge.data?.targetType as WorkspaceNodeType | undefined) ?? typeMap.get(edge.target) ?? 'adset',
+    }));
 };
