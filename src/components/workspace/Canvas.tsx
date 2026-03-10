@@ -28,6 +28,10 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { CanvasElement } from './types/canvas';
 import type { WorkspaceConnection as Connection } from '@/types/workspaceGraph';
+import {
+  workspaceElementsToReactFlowNodes,
+  workspaceConnectionsToReactFlowEdges,
+} from '@/lib/workspaceGraphMapper';
 import { toast } from 'sonner';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ValidationPanel from './ValidationPanel';
@@ -63,77 +67,6 @@ const isValidConnection = (connection: RFConnection, nodes: Node[]): boolean => 
   );
 };
 
-// Convert CanvasElement[] to React Flow Node[]
-function elementsToNodes(
-  elements: CanvasElement[],
-  callbacks: {
-    onEdit: (id: string, updates: Partial<CanvasElement>) => void;
-    onDelete: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
-    campaigns: { id: string; name: string }[];
-    adSets: { id: string; name: string }[];
-  },
-): Node[] {
-  return elements.map(el => ({
-    id: el.id,
-    type: el.type,
-    position: { x: el.position.x, y: el.position.y },
-    data: {
-      label: el.name,
-      config: el.config,
-      elementId: el.id,
-      onEdit: callbacks.onEdit,
-      onDelete: callbacks.onDelete,
-      onDuplicate: callbacks.onDuplicate,
-      onStartConnection: callbacks.onStartConnection,
-      campaigns: callbacks.campaigns,
-      adSets: callbacks.adSets,
-    },
-  }));
-}
-
-// Convert Connection[] to React Flow Edge[]
-function connectionsToEdges(connections: Connection[]): Edge[] {
-  return connections.map(c => ({
-    id: c.id,
-    source: c.sourceId,
-    target: c.targetId,
-    type: 'smoothstep',
-    animated: false,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-    style: { strokeWidth: 2, stroke: 'hsl(var(--muted-foreground) / 0.55)' },
-    data: { sourceType: c.sourceType, targetType: c.targetType },
-  }));
-}
-
-// Convert React Flow nodes back to CanvasElement[]
-function nodesToElements(nodes: Node[], existingElements: CanvasElement[]): CanvasElement[] {
-  const elMap = new Map(existingElements.map(e => [e.id, e]));
-  return nodes.map(n => {
-    const existing = elMap.get(n.id);
-    return {
-      id: n.id,
-      type: (n.type as CanvasElement['type']) || 'campaign',
-      name: (n.data?.label as string) ?? existing?.name ?? 'Untitled',
-      position: { x: n.position.x, y: n.position.y },
-      config: (n.data?.config as Record<string, unknown>) ?? existing?.config ?? {},
-    };
-  });
-}
-
-// Convert React Flow edges back to Connection[]
-function edgesToConnections(edges: Edge[], nodes: Node[]): Connection[] {
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  return edges.map(e => ({
-    id: e.id,
-    sourceId: e.source,
-    targetId: e.target,
-    sourceType: (nodeMap.get(e.source)?.type as Connection['sourceType']) ?? 'campaign',
-    targetType: (nodeMap.get(e.target)?.type as Connection['targetType']) ?? 'adset',
-  }));
-}
-
 const nodeTypes: NodeTypes = {
   campaign: CampaignNode,
   adset: AdSetNode,
@@ -153,7 +86,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     undo, redo, pushSnapshot,
   } = useWorkspace();
 
-  const { fitView, setViewport, getViewport } = useReactFlow();
+  const { fitView, setViewport } = useReactFlow();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -164,8 +97,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const [pendingAffected, setPendingAffected] = useState<CanvasElement[]>([]);
   const [pendingDirectTargets, setPendingDirectTargets] = useState<CanvasElement[]>([]);
 
-  // Track whether we're syncing from workspace to avoid loops
-  const syncingRef = useRef(false);
   const elementsRef = useRef(elements);
   elementsRef.current = elements;
   const connectionsRef = useRef(connections);
@@ -272,8 +203,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
   // Sync workspace elements → React Flow nodes
   useEffect(() => {
-    syncingRef.current = true;
-    const rfNodes = elementsToNodes(elements, {
+    const rfNodes = workspaceElementsToReactFlowNodes(elements, {
       onEdit: handleEditElement,
       onDelete: handleDeleteElement,
       onDuplicate: handleDuplicateElement,
@@ -282,14 +212,11 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       adSets,
     });
     setNodes(rfNodes);
-    requestAnimationFrame(() => { syncingRef.current = false; });
   }, [elements, campaigns, adSets, handleEditElement, handleDeleteElement, handleDuplicateElement, handleStartConnection]);
 
   // Sync workspace connections → React Flow edges
   useEffect(() => {
-    syncingRef.current = true;
-    setEdges(connectionsToEdges(connections));
-    requestAnimationFrame(() => { syncingRef.current = false; });
+    setEdges(workspaceConnectionsToReactFlowEdges(connections));
   }, [connections]);
 
   // Hydrate viewport from saved state once nodes are ready
@@ -543,11 +470,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     executeDelete(pendingDeleteIds);
     setDeleteConfirmOpen(false);
   }, [pendingDeleteIds, executeDelete]);
-
-  // Pane context menu for adding nodes
-  const handlePaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
-    // Let CanvasContextMenu handle it
-  }, []);
 
   const defaultEdgeOptions = useMemo(() => ({
     type: 'smoothstep',
