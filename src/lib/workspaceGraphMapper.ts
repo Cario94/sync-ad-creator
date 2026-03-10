@@ -16,7 +16,7 @@ export interface WorkspaceDocumentModel {
   viewport: WorkspaceViewport;
 }
 
-export interface WorkspaceCanvasNodeData {
+export type WorkspaceCanvasNodeData = {
   label: string;
   config: Record<string, unknown>;
   elementId: string;
@@ -25,13 +25,15 @@ export interface WorkspaceCanvasNodeData {
   onDuplicate: (id: string) => void;
   campaigns: { id: string; name: string }[];
   adSets: { id: string; name: string }[];
-}
+  [key: string]: unknown;
+};
 
-export interface WorkspaceFlowNodeData {
+export type WorkspaceFlowNodeData = {
   label: string;
   config: Record<string, unknown>;
   elementId: string;
-}
+  [key: string]: unknown;
+};
 
 type PersistedFlowNode = {
   id: string;

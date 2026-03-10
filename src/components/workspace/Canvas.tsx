@@ -234,7 +234,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
   // Handle node changes (React Flow is the live editing source-of-truth)
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
-    setNodes(prev => applyNodeChanges(changes, prev));
+    setNodes(prev => applyNodeChanges(changes, prev) as Node<WorkspaceFlowNodeData>[]);
 
     const hasPositionChange = changes.some(c => c.type === 'position' && c.position);
     if (hasPositionChange) {
@@ -397,7 +397,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     panOnScrollSpeed: 1.1,
     // Keep zoom available, but make it intentional to avoid accidental zoom while panning.
     zoomOnScroll: true,
-    zoomActivationKeyCode: ['Meta', 'Control'] as const,
+    zoomActivationKeyCode: ['Meta', 'Control'] as string[],
     zoomOnPinch: true,
     // Reduce extreme zoom ranges for steadier navigation context.
     minZoom: 0.35,
