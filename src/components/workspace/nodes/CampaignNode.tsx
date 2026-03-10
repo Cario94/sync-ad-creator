@@ -15,7 +15,6 @@ export type CampaignNodeData = {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onStartConnection: (id: string, type: 'campaign' | 'adset' | 'ad') => void;
 };
 
 export type CampaignNodeType = Node<CampaignNodeData, 'campaign'>;
@@ -36,7 +35,6 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
     <>
       <CanvasContextMenu
         onEdit={() => setDialogOpen(true)}
-        onConnect={() => data.onStartConnection(data.elementId, 'campaign')}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
         elementType="campaign"

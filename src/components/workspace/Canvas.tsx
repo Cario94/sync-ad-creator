@@ -190,11 +190,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success(`Duplicated ${source.type}`);
   }, [pushSnapshot, markDirty, setElements]);
 
-  // Stub for start connection — React Flow handles this natively, but context menu may trigger it
-  const handleStartConnection = useCallback((_id: string, _type: 'campaign' | 'adset' | 'ad') => {
-    // React Flow handles connections natively via handles
-  }, []);
-
   const campaigns = useMemo(() =>
     elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
   [elements]);
@@ -209,12 +204,11 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       onEdit: handleEditElement,
       onDelete: handleDeleteElement,
       onDuplicate: handleDuplicateElement,
-      onStartConnection: handleStartConnection,
       campaigns,
       adSets,
     });
     setNodes(rfNodes);
-  }, [elements, campaigns, adSets, handleEditElement, handleDeleteElement, handleDuplicateElement, handleStartConnection]);
+  }, [elements, campaigns, adSets, handleEditElement, handleDeleteElement, handleDuplicateElement]);
 
   // Sync workspace connections → React Flow edges
   useEffect(() => {

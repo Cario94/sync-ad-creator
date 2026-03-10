@@ -23,7 +23,6 @@ export interface WorkspaceCanvasNodeData {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onStartConnection: (id: string, type: WorkspaceNodeType) => void;
   campaigns: { id: string; name: string }[];
   adSets: { id: string; name: string }[];
 }
@@ -141,7 +140,6 @@ export const workspaceElementsToReactFlowNodes = (
     onEdit: (id: string, updates: Partial<CanvasElement>) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
-    onStartConnection: (id: string, type: WorkspaceNodeType) => void;
     campaigns: { id: string; name: string }[];
     adSets: { id: string; name: string }[];
   },
@@ -157,7 +155,6 @@ export const workspaceElementsToReactFlowNodes = (
       onEdit: callbacks.onEdit,
       onDelete: callbacks.onDelete,
       onDuplicate: callbacks.onDuplicate,
-      onStartConnection: callbacks.onStartConnection,
       campaigns: callbacks.campaigns,
       adSets: callbacks.adSets,
     },

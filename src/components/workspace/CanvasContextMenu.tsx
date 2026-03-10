@@ -10,14 +10,13 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { Pencil, Copy, Trash, Link, Plus } from 'lucide-react';
+import { Pencil, Copy, Trash, Plus } from 'lucide-react';
 
 interface CanvasContextMenuProps {
   children: React.ReactNode;
   onEdit?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
-  onConnect?: () => void;
   onAddCampaign?: () => void;
   onAddAdSet?: () => void;
   onAddAd?: () => void;
@@ -30,7 +29,6 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   onEdit,
   onDelete,
   onDuplicate,
-  onConnect,
   onAddCampaign,
   onAddAdSet,
   onAddAd,
@@ -80,12 +78,6 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           </ContextMenuItem>
         )}
         
-        {onConnect && (
-          <ContextMenuItem className="flex items-center gap-2" onClick={onConnect}>
-            <Link className="h-4 w-4" />
-            <span>Connect {elementType === 'campaign' ? 'to Ad Set' : elementType === 'adset' ? 'to Ad' : ''}</span>
-          </ContextMenuItem>
-        )}
         
         {onDuplicate && (
           <ContextMenuItem className="flex items-center gap-2" onClick={onDuplicate}>
