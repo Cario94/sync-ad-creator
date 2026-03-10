@@ -250,7 +250,7 @@ function WorkspaceInner() {
         <div className="flex-1 overflow-hidden relative">
           <Canvas ref={canvasRef} onSave={handleSave} />
 
-          <div className="absolute bottom-20 right-4 z-10">
+          <div className="absolute bottom-28 right-3 z-10">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="secondary" size="icon" onClick={handleTidyLayout} className="rounded-full shadow-md h-10 w-10">
