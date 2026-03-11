@@ -150,9 +150,9 @@ function WorkspaceInner() {
   }
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden relative">
       {/* Sidebar */}
-      <div className={`h-full bg-card border-r border-border flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 -ml-64'}`}>
+      <div className={`h-full bg-card border-r border-border flex flex-col transition-all duration-300 shrink-0 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
         <div className="flex items-center justify-between p-6">
           <Link to="/dashboard" className="text-xl font-bold text-gradient">CampaignSync</Link>
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
