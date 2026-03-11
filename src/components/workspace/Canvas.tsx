@@ -516,7 +516,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             connectionRadius={24}
             snapToGrid
             snapGrid={SNAP_GRID}
-            nodeDragThreshold={1}
+            nodeDragThreshold={2}
             deleteKeyCode={null}
             elevateEdgesOnSelect
             proOptions={{ hideAttribution: true }}
