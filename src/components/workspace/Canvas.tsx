@@ -391,29 +391,25 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
 
   const viewportModel = useMemo(() => ({
-    // Trackpad / wheel: default to panning for two-finger scroll.
+    // Trackpad two-finger gesture = pan (via panOnScroll).
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    // Slightly faster than default for more responsive desktop navigation.
-    panOnScrollSpeed: 1.1,
-    // Keep zoom available, but make it intentional to avoid accidental zoom while panning.
-    zoomOnScroll: true,
-    zoomActivationKeyCode: ['Meta', 'Control'] as string[],
+    panOnScrollSpeed: 1.5,
+    // Zoom only via pinch or Ctrl/Cmd+scroll.
+    zoomOnScroll: false,
     zoomOnPinch: true,
-    // Reduce extreme zoom ranges for steadier navigation context.
-    minZoom: 0.35,
-    maxZoom: 2,
+    minZoom: 0.2,
+    maxZoom: 2.5,
   }), []);
 
   const interactionModel = useMemo(() => ({
-    // Primary desktop behavior: drag empty space to pan.
-    panOnDrag: true as const,
-    // Keep marquee selection explicit so it doesn't conflict with panning.
-    selectionOnDrag: false,
-    // Use one modifier model for range-select and additive selection.
-    selectionKeyCode: 'Shift' as const,
+    // Click+drag on empty canvas = marquee selection (NOT pan).
+    panOnDrag: false as const,
+    selectionOnDrag: true,
+    selectionMode: SelectionMode.Partial,
+    // Shift for additive multi-select.
     multiSelectionKeyCode: 'Shift' as const,
-    // Keep middle-mouse panning available as an alternative muscle memory.
+    // Middle-mouse or Space+drag for manual panning.
     panActivationKeyCode: 'Space' as const,
   }), []);
 

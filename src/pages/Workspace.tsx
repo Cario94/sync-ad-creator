@@ -162,8 +162,11 @@ function WorkspaceInner() {
 
         <nav className="flex-1 px-4 py-2">
           <div className="space-y-1">
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => navigate('/dashboard')}>
+              <LayoutDashboard className="mr-3 h-5 w-5" />Projects
+            </Button>
             <Button variant="secondary" className="w-full justify-start font-medium">
-              <LayoutDashboard className="mr-3 h-5 w-5" />Workspace
+              <DraftingCompass className="mr-3 h-5 w-5" />Workspace
             </Button>
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => setMediaLibraryOpen(true)}>
               <Image className="mr-3 h-5 w-5" />Media Library
