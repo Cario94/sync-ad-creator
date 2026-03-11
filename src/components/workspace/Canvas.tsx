@@ -468,15 +468,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
               position="bottom-right"
             />
             <Panel position="bottom-left">
-              <div className="minimap-resizable">
-                <MiniMap
-                  nodeStrokeWidth={3}
-                  pannable
-                  zoomable
-                  maskColor="hsl(var(--background) / 0.7)"
-                  style={{ position: 'relative', width: '100%', height: '100%' }}
-                />
-              </div>
+              <ResizableMiniMap />
             </Panel>
             <Panel position="top-left">
               <ValidationPanel />
