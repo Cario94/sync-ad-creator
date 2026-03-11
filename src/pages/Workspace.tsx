@@ -150,9 +150,9 @@ function WorkspaceInner() {
   }
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden relative">
       {/* Sidebar */}
-      <div className={`h-full bg-card border-r border-border flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 -ml-64'}`}>
+      <div className={`h-full bg-card border-r border-border flex flex-col transition-all duration-300 shrink-0 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
         <div className="flex items-center justify-between p-6">
           <Link to="/dashboard" className="text-xl font-bold text-gradient">CampaignSync</Link>
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
@@ -197,11 +197,13 @@ function WorkspaceInner() {
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
         <header className="h-16 border-b border-border px-4 flex items-center justify-between glass-morphism">
-          {!sidebarOpen && (
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
+          <div className="flex items-center">
+            {!sidebarOpen && (
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
           <div className="text-lg font-semibold ml-auto mr-auto truncate max-w-xs">{projectName || 'Workspace'}</div>
           <div className="flex items-center space-x-3">
             <SaveStatusIndicator status={saveStatus} />
