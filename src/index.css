@@ -187,15 +187,27 @@
 }
 
 .minimap-resizable {
-  width: 200px;
-  height: 150px;
-  min-width: 120px;
-  min-height: 90px;
-  max-width: 400px;
-  max-height: 300px;
-  resize: both;
+  position: relative;
   overflow: hidden;
   @apply bg-card/90 backdrop-blur-sm border border-border rounded-lg shadow-md;
+}
+
+.minimap-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  cursor: ne-resize;
+  z-index: 10;
+  background: linear-gradient(225deg, hsl(var(--border)) 40%, transparent 40%);
+  border-radius: 0 0.5rem 0 0;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.minimap-resize-handle:hover {
+  opacity: 1;
 }
 
 .minimap-resizable .react-flow__minimap {
