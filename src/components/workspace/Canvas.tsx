@@ -40,6 +40,7 @@ import AdSetNode from './nodes/AdSetNode';
 import AdNode from './nodes/AdNode';
 import WorkspaceEdge from './edges/WorkspaceEdge';
 import WorkspaceConnectionLine from './edges/WorkspaceConnectionLine';
+import ResizableMiniMap from './ResizableMiniMap';
 
 interface CanvasProps {
   className?: string;
