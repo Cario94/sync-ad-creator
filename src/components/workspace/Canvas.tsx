@@ -346,6 +346,53 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     getViewport: () => viewportRef.current,
   }), [tidyLayout, viewportRef]);
 
+  // Clipboard state for copy/paste
+  const clipboardRef = useRef<Node<WorkspaceFlowNodeData>[]>([]);
+
+  const copySelected = useCallback(() => {
+    const selected = nodes.filter(n => selectedElementIds.includes(n.id));
+    if (selected.length === 0) return;
+    clipboardRef.current = selected.map(n => JSON.parse(JSON.stringify(n)));
+    toast.success(`Copied ${selected.length} element${selected.length > 1 ? 's' : ''}`);
+  }, [nodes, selectedElementIds]);
+
+  const pasteClipboard = useCallback(() => {
+    if (clipboardRef.current.length === 0) return;
+    pushSnapshot();
+    const newNodes: Node<WorkspaceFlowNodeData>[] = clipboardRef.current.map(n => {
+      const newId = generateId(n.type || 'node');
+      return {
+        ...n,
+        id: newId,
+        position: { x: n.position.x + 50, y: n.position.y + 50 },
+        selected: false,
+        data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
+      };
+    });
+    setNodes(prev => [...prev, ...newNodes]);
+    markDirty();
+    toast.success(`Pasted ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
+  }, [pushSnapshot, setNodes, markDirty]);
+
+  const duplicateSelected = useCallback(() => {
+    const selected = nodes.filter(n => selectedElementIds.includes(n.id));
+    if (selected.length === 0) return;
+    pushSnapshot();
+    const newNodes: Node<WorkspaceFlowNodeData>[] = selected.map(n => {
+      const newId = generateId(n.type || 'node');
+      return {
+        ...n,
+        id: newId,
+        position: { x: n.position.x + 30, y: n.position.y + 30 },
+        selected: false,
+        data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
+      };
+    });
+    setNodes(prev => [...prev, ...newNodes]);
+    markDirty();
+    toast.success(`Duplicated ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
+  }, [nodes, selectedElementIds, pushSnapshot, setNodes, markDirty]);
+
   // Keyboard shortcuts
   const { preferences: userPrefs } = useUserSettings();
   const kbShortcutsEnabled = userPrefs.keyboardShortcuts !== false;
@@ -358,9 +405,29 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
 
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (mod && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
+        return;
+      }
+
+      if (mod && e.key === 'c') {
+        e.preventDefault();
+        copySelected();
+        return;
+      }
+
+      if (mod && e.key === 'v') {
+        e.preventDefault();
+        pasteClipboard();
+        return;
+      }
+
+      if (mod && e.key === 'd') {
+        e.preventDefault();
+        duplicateSelected();
         return;
       }
 
@@ -372,7 +439,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [kbShortcutsEnabled, selectedElementIds, undo, redo, requestDelete]);
+  }, [kbShortcutsEnabled, selectedElementIds, undo, redo, requestDelete, copySelected, pasteClipboard, duplicateSelected]);
 
   const handleConfirmDelete = useCallback(() => {
     executeDelete(pendingDeleteIds);
