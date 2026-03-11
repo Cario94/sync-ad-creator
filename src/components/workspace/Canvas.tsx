@@ -461,22 +461,23 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     // Trackpad two-finger gesture = pan (via panOnScroll).
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    panOnScrollSpeed: 1.5,
+    panOnScrollSpeed: 2.5,
     // Zoom only via pinch or Ctrl/Cmd+scroll.
     zoomOnScroll: false,
     zoomOnPinch: true,
-    minZoom: 0.2,
-    maxZoom: 2.5,
+    minZoom: 0.1,
+    maxZoom: 3,
   }), []);
 
   const interactionModel = useMemo(() => ({
     // Click+drag on empty canvas = marquee selection (NOT pan).
-    panOnDrag: false as const,
+    // Use [1,2] to allow middle-mouse panning as well.
+    panOnDrag: [1, 2] as number[],
     selectionOnDrag: true,
     selectionMode: SelectionMode.Partial,
     // Shift for additive multi-select.
     multiSelectionKeyCode: 'Shift' as const,
-    // Middle-mouse or Space+drag for manual panning.
+    // Space+drag for manual panning with left click.
     panActivationKeyCode: 'Space' as const,
   }), []);
 
