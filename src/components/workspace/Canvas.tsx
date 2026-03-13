@@ -484,7 +484,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const viewportModel = useMemo(() => ({
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    panOnScrollSpeed: 0.8,
+    panOnScrollSpeed: 0.55,
     zoomOnScroll: true,
     zoomOnPinch: true,
     minZoom: 0.1,
@@ -543,6 +543,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             nodeDragThreshold={2}
             deleteKeyCode={null}
             elevateEdgesOnSelect
+            onlyRenderVisibleElements
             proOptions={{ hideAttribution: true }}
           >
             <Background

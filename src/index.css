@@ -221,10 +221,17 @@
 .workspace-flow .react-flow__pane {
   touch-action: none;
   will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: none !important;
 }
 
+.workspace-flow .react-flow__viewport,
 .workspace-flow .react-flow__node {
   will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: none !important;
 }
 
 .workspace-flow .workspace-edge-path {
