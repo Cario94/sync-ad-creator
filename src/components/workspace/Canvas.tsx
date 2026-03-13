@@ -265,7 +265,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
 
     const hasPositionChange = changes.some(c => c.type === 'position' && c.position);
     if (hasPositionChange) {
-      pushSnapshot();
       markDirty();
     }
 
@@ -285,7 +284,15 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
         return next;
       });
     }
-  }, [setNodes, pushSnapshot, markDirty, setSelectedElementIds]);
+  }, [setNodes, markDirty, setSelectedElementIds]);
+
+  const handleNodeDragStart = useCallback(() => {
+    pushSnapshot();
+  }, [pushSnapshot]);
+
+  const handleNodeDragStop = useCallback(() => {
+    markDirty();
+  }, [markDirty]);
 
   // Handle edge changes
   const handleEdgesChange: OnEdgesChange = useCallback((changes) => {
@@ -504,6 +511,8 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             nodes={renderNodes}
             edges={edges}
             onNodesChange={handleNodesChange}
+            onNodeDragStart={handleNodeDragStart}
+            onNodeDragStop={handleNodeDragStop}
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
             isValidConnection={isValidConnectionFn}
