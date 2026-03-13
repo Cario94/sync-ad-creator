@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Megaphone } from 'lucide-react';
+import { ArrowRight, Megaphone, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hydrateCampaignConfig, type CanvasElement } from '../types/canvas';
 import NodeValidationBadge from '../NodeValidationBadge';
@@ -68,9 +68,14 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
           <Handle
             type="source"
             position={Position.Right}
-            className="!w-3.5 !h-3.5 !bg-primary !border-2 !border-background !shadow-sm"
+            className="!w-7 !h-7 !rounded-full !border-2 !border-background !shadow-md !flex !items-center !justify-center !bg-primary !transition-transform !duration-150 hover:!scale-110"
             style={{ top: '50%' }}
-          />
+          >
+            <span className="relative !flex !items-center !justify-center">
+              <ArrowRight className="!w-4 !h-4 !text-primary-foreground" />
+              <Plus className="!w-2.5 !h-2.5 !text-primary-foreground absolute -top-1 -right-1" />
+            </span>
+          </Handle>
         </div>
       </CanvasContextMenu>
 
