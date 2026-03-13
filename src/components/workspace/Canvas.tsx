@@ -186,7 +186,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       ...source,
       id: generateId(source.type),
       name: `${source.name} (copy)`,
-      position: { x: source.position.x + 30, y: source.position.y + 30 },
+      position: { x: source.position.x + 220, y: source.position.y },
       config: source.config ? JSON.parse(JSON.stringify(source.config)) : {},
     };
     const duplicatedNode: Node<WorkspaceFlowNodeData> = {
@@ -364,7 +364,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       return {
         ...n,
         id: newId,
-        position: { x: n.position.x + 50, y: n.position.y + 50 },
+        position: { x: n.position.x + 220, y: n.position.y },
         selected: false,
         data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
       };
@@ -383,7 +383,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       return {
         ...n,
         id: newId,
-        position: { x: n.position.x + 30, y: n.position.y + 30 },
+        position: { x: n.position.x + 220, y: n.position.y },
         selected: false,
         data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
       };
