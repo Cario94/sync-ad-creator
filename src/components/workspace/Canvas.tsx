@@ -484,7 +484,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const viewportModel = useMemo(() => ({
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    panOnScrollSpeed: 0.55,
+    panOnScrollSpeed: 0.5,
     zoomOnScroll: true,
     zoomOnPinch: true,
     minZoom: 0.1,
@@ -540,7 +540,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             connectionRadius={24}
             snapToGrid={isShiftPressed}
             snapGrid={SNAP_GRID}
-            nodeDragThreshold={2}
+            nodeDragThreshold={1}
             deleteKeyCode={null}
             elevateEdgesOnSelect
             onlyRenderVisibleElements
