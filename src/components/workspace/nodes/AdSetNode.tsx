@@ -42,7 +42,7 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
       >
         <div
           className={cn(
-            'p-4 rounded-lg glass-dark shadow-md border-2 border-accent-foreground/35 relative',
+            'p-4 rounded-lg bg-card shadow-md border-2 border-accent-foreground relative',
             selected ? 'ring-2 ring-primary shadow-lg' : '',
           )}
           style={{ width: '264px', minHeight: '130px' }}

@@ -41,7 +41,7 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
       >
         <div
           className={cn(
-            'p-5 w-72 rounded-xl glass-dark shadow-lg border-2 border-primary/40 relative',
+            'p-5 w-72 rounded-xl bg-card shadow-lg border-2 border-primary relative',
             selected ? 'ring-2 ring-primary shadow-xl' : '',
           )}
           onDoubleClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}
@@ -63,13 +63,6 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
             type="source"
             position={Position.Right}
             className="!w-3.5 !h-3.5 !bg-primary !border-2 !border-background !shadow-sm"
-            style={{ top: '50%' }}
-          />
-          {/* Target handle on the left (for potential re-parenting) */}
-          <Handle
-            type="target"
-            position={Position.Left}
-            className="!w-3.5 !h-3.5 !bg-primary/45 !border-2 !border-background !shadow-sm"
             style={{ top: '50%' }}
           />
         </div>
