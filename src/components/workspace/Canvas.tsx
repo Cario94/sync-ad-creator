@@ -186,7 +186,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       ...source,
       id: generateId(source.type),
       name: `${source.name} (copy)`,
-      position: { x: source.position.x + 30, y: source.position.y + 30 },
+      position: { x: source.position.x + 220, y: source.position.y },
       config: source.config ? JSON.parse(JSON.stringify(source.config)) : {},
     };
     const duplicatedNode: Node<WorkspaceFlowNodeData> = {
