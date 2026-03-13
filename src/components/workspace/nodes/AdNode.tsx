@@ -42,7 +42,7 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
       >
         <div
           className={cn(
-            'p-3.5 rounded-lg bg-card shadow-sm border-2 border-muted-foreground relative',
+            'p-3.5 bg-card border border-muted-foreground/50 rounded-xl shadow-sm relative',
             selected ? 'ring-2 ring-primary shadow-md' : '',
           )}
           style={{ width: '240px', minHeight: '120px' }}
