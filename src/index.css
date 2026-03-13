@@ -277,6 +277,14 @@
 
 .react-flow__selection {
   @apply bg-primary/10 border-2 border-primary rounded;
+  will-change: transform, width, height;
+  transition: none !important;
+}
+
+.react-flow__nodesselection-rect,
+.react-flow__nodesselection {
+  will-change: transform;
+  transition: none !important;
 }
 
 .react-flow__panel {

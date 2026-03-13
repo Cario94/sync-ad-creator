@@ -266,11 +266,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const handleNodesChange: OnNodesChange = useCallback((changes) => {
     setNodes(prev => applyNodeChanges(changes, prev) as Node<WorkspaceFlowNodeData>[]);
 
-    const hasPositionChange = changes.some(c => c.type === 'position' && c.position);
-    if (hasPositionChange) {
-      markDirty();
-    }
-
     const selectionChanges = changes.filter(c => c.type === 'select');
     if (selectionChanges.length > 0) {
       setSelectedElementIds(prev => {
@@ -284,10 +279,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             }
           }
         }
+        if (next.length === prev.length && next.every((id, index) => id === prev[index])) {
+          return prev;
+        }
         return next;
       });
     }
-  }, [setNodes, markDirty, setSelectedElementIds]);
+  }, [setNodes, setSelectedElementIds]);
 
   const handleNodeDragStart = useCallback(() => {
     pushSnapshot();
