@@ -186,19 +186,21 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       ...source,
       id: generateId(source.type),
       name: `${source.name} (copy)`,
-      position: { x: source.position.x + 220, y: source.position.y },
+      position: { x: source.position.x + 300, y: source.position.y },
       config: source.config ? JSON.parse(JSON.stringify(source.config)) : {},
     };
     const duplicatedNode: Node<WorkspaceFlowNodeData> = {
       id: newElement.id,
       type: newElement.type,
       position: newElement.position,
+      selected: true,
       data: { label: newElement.name, config: newElement.config ?? {}, elementId: newElement.id },
     };
-    setNodes(prev => [...prev, duplicatedNode]);
+    setNodes(prev => [...prev.map(node => ({ ...node, selected: false })), duplicatedNode]);
+    setSelectedElementIds([duplicatedNode.id]);
     markDirty();
     toast.success(`Duplicated ${source.type}`);
-  }, [pushSnapshot, markDirty, setNodes]);
+  }, [pushSnapshot, markDirty, setNodes, setSelectedElementIds]);
 
   const campaigns = useMemo(() =>
     elements.filter(el => el.type === 'campaign').map(el => ({ id: el.id, name: el.name })),
@@ -218,15 +220,16 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       return {
         ...n,
         id: newId,
-        position: { x: n.position.x + 220, y: n.position.y },
-        selected: false,
+        position: { x: n.position.x + 300, y: n.position.y },
+        selected: true,
         data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
       };
     });
-    setNodes(prev => [...prev, ...newNodes]);
+    setNodes(prev => [...prev.map(node => ({ ...node, selected: false })), ...newNodes]);
+    setSelectedElementIds(newNodes.map(node => node.id));
     markDirty();
     toast.success(`Duplicated ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
-  }, [nodes, selectedElementIds, pushSnapshot, setNodes, markDirty]);
+  }, [nodes, selectedElementIds, pushSnapshot, setNodes, setSelectedElementIds, markDirty]);
 
   const deleteSelected = useCallback(() => {
     if (selectedElementIds.length > 0) requestDelete(selectedElementIds);
@@ -397,15 +400,16 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       return {
         ...n,
         id: newId,
-        position: { x: n.position.x + 220, y: n.position.y },
-        selected: false,
+        position: { x: n.position.x + 300, y: n.position.y },
+        selected: true,
         data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
       };
     });
-    setNodes(prev => [...prev, ...newNodes]);
+    setNodes(prev => [...prev.map(node => ({ ...node, selected: false })), ...newNodes]);
+    setSelectedElementIds(newNodes.map(node => node.id));
     markDirty();
     toast.success(`Pasted ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
-  }, [pushSnapshot, setNodes, markDirty]);
+  }, [pushSnapshot, setNodes, setSelectedElementIds, markDirty]);
 
 
   // Keyboard shortcuts
