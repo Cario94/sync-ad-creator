@@ -17,6 +17,9 @@ interface CanvasContextMenuProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  onDuplicateSelected?: () => void;
+  onDeleteSelected?: () => void;
+  selectedCount?: number;
   onAddCampaign?: () => void;
   onAddAdSet?: () => void;
   onAddAd?: () => void;
@@ -29,6 +32,9 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   onEdit,
   onDelete,
   onDuplicate,
+  onDuplicateSelected,
+  onDeleteSelected,
+  selectedCount = 0,
   onAddCampaign,
   onAddAdSet,
   onAddAd,
@@ -67,35 +73,59 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     );
   }
 
+  const isMulti = selectedCount > 1;
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-64">
-        {onEdit && (
-          <ContextMenuItem className="flex items-center gap-2" onClick={onEdit}>
-            <Pencil className="h-4 w-4" />
-            <span>Edit {elementType}</span>
-          </ContextMenuItem>
-        )}
-        
-        
-        {onDuplicate && (
-          <ContextMenuItem className="flex items-center gap-2" onClick={onDuplicate}>
-            <Copy className="h-4 w-4" />
-            <span>Duplicate</span>
-          </ContextMenuItem>
-        )}
-        
-        {onDelete && (
+        {isMulti ? (
           <>
-            <ContextMenuSeparator />
-            <ContextMenuItem 
-              className="flex items-center gap-2 text-destructive focus:text-destructive" 
-              onClick={onDelete}
-            >
-              <Trash className="h-4 w-4" />
-              <span>Delete {elementType}</span>
-            </ContextMenuItem>
+            {onDuplicateSelected && (
+              <ContextMenuItem className="flex items-center gap-2" onClick={onDuplicateSelected}>
+                <Copy className="h-4 w-4" />
+                <span>Duplicate {selectedCount} selected elements</span>
+              </ContextMenuItem>
+            )}
+            {onDeleteSelected && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  className="flex items-center gap-2 text-destructive focus:text-destructive"
+                  onClick={onDeleteSelected}
+                >
+                  <Trash className="h-4 w-4" />
+                  <span>Delete {selectedCount} selected elements</span>
+                </ContextMenuItem>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {onEdit && (
+              <ContextMenuItem className="flex items-center gap-2" onClick={onEdit}>
+                <Pencil className="h-4 w-4" />
+                <span>Edit {elementType}</span>
+              </ContextMenuItem>
+            )}
+            {onDuplicate && (
+              <ContextMenuItem className="flex items-center gap-2" onClick={onDuplicate}>
+                <Copy className="h-4 w-4" />
+                <span>Duplicate</span>
+              </ContextMenuItem>
+            )}
+            {onDelete && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  className="flex items-center gap-2 text-destructive focus:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash className="h-4 w-4" />
+                  <span>Delete {elementType}</span>
+                </ContextMenuItem>
+              </>
+            )}
           </>
         )}
       </ContextMenuContent>

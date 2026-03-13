@@ -16,6 +16,9 @@ export type AdSetNodeData = {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onDuplicateSelected: () => void;
+  onDeleteSelected: () => void;
+  selectedCount: number;
 };
 
 export type AdSetNodeType = Node<AdSetNodeData, 'adset'>;
@@ -38,6 +41,9 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
         onEdit={() => setDialogOpen(true)}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
+        onDuplicateSelected={data.onDuplicateSelected}
+        onDeleteSelected={data.onDeleteSelected}
+        selectedCount={data.selectedCount}
         elementType="adset"
       >
         <div

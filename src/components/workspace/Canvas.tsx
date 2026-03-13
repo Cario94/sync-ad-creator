@@ -209,6 +209,29 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   [elements]);
 
 
+  const duplicateSelected = useCallback(() => {
+    const selected = nodes.filter(n => selectedElementIds.includes(n.id));
+    if (selected.length === 0) return;
+    pushSnapshot();
+    const newNodes: Node<WorkspaceFlowNodeData>[] = selected.map(n => {
+      const newId = generateId(n.type || 'node');
+      return {
+        ...n,
+        id: newId,
+        position: { x: n.position.x + 220, y: n.position.y },
+        selected: false,
+        data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
+      };
+    });
+    setNodes(prev => [...prev, ...newNodes]);
+    markDirty();
+    toast.success(`Duplicated ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
+  }, [nodes, selectedElementIds, pushSnapshot, setNodes, markDirty]);
+
+  const deleteSelected = useCallback(() => {
+    if (selectedElementIds.length > 0) requestDelete(selectedElementIds);
+  }, [selectedElementIds, requestDelete]);
+
   const renderNodes = useMemo(() => nodes.map(node => ({
     ...node,
     data: {
@@ -216,10 +239,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       onEdit: handleEditElement,
       onDelete: handleDeleteElement,
       onDuplicate: handleDuplicateElement,
+      onDuplicateSelected: duplicateSelected,
+      onDeleteSelected: deleteSelected,
+      selectedCount: selectedElementIds.length,
       campaigns,
       adSets,
     },
-  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, campaigns, adSets]);
+  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, duplicateSelected, deleteSelected, selectedElementIds.length, campaigns, adSets]);
 
   // Hydrate viewport from saved state once nodes are ready
   const viewportRestoredRef = useRef(false);
@@ -374,24 +400,6 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     toast.success(`Pasted ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
   }, [pushSnapshot, setNodes, markDirty]);
 
-  const duplicateSelected = useCallback(() => {
-    const selected = nodes.filter(n => selectedElementIds.includes(n.id));
-    if (selected.length === 0) return;
-    pushSnapshot();
-    const newNodes: Node<WorkspaceFlowNodeData>[] = selected.map(n => {
-      const newId = generateId(n.type || 'node');
-      return {
-        ...n,
-        id: newId,
-        position: { x: n.position.x + 220, y: n.position.y },
-        selected: false,
-        data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
-      };
-    });
-    setNodes(prev => [...prev, ...newNodes]);
-    markDirty();
-    toast.success(`Duplicated ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
-  }, [nodes, selectedElementIds, pushSnapshot, setNodes, markDirty]);
 
   // Keyboard shortcuts
   const { preferences: userPrefs } = useUserSettings();

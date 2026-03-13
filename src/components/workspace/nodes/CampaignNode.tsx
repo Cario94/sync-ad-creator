@@ -15,6 +15,9 @@ export type CampaignNodeData = {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onDuplicateSelected: () => void;
+  onDeleteSelected: () => void;
+  selectedCount: number;
 };
 
 export type CampaignNodeType = Node<CampaignNodeData, 'campaign'>;
@@ -37,6 +40,9 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
         onEdit={() => setDialogOpen(true)}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
+        onDuplicateSelected={data.onDuplicateSelected}
+        onDeleteSelected={data.onDeleteSelected}
+        selectedCount={data.selectedCount}
         elementType="campaign"
       >
         <div
