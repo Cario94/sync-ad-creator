@@ -521,7 +521,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             minZoom={viewportModel.minZoom}
             maxZoom={viewportModel.maxZoom}
             connectionRadius={24}
-            snapToGrid
+            snapToGrid={isShiftPressed}
             snapGrid={SNAP_GRID}
             nodeDragThreshold={2}
             deleteKeyCode={null}
