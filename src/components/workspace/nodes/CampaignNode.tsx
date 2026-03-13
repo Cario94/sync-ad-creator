@@ -15,6 +15,9 @@ export type CampaignNodeData = {
   onEdit: (id: string, updates: Partial<CanvasElement>) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onDuplicateSelected: () => void;
+  onDeleteSelected: () => void;
+  selectedCount: number;
 };
 
 export type CampaignNodeType = Node<CampaignNodeData, 'campaign'>;
