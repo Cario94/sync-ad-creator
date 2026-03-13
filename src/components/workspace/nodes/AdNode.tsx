@@ -76,7 +76,7 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
           <Handle
             type="target"
             position={Position.Left}
-            className="!w-3.5 !h-3.5 !bg-muted-foreground/65 !border-2 !border-background !shadow-sm"
+            className="!w-7 !h-7 !rounded-full !border-2 !border-background !shadow-md !flex !items-center !justify-center !bg-muted-foreground/40"
             style={{ top: '50%' }}
           />
         </div>
