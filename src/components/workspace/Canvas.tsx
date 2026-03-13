@@ -457,12 +457,19 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   }), []);
 
 
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => { if (e.key === 'Shift') setIsShiftPressed(true); };
+    const up = (e: KeyboardEvent) => { if (e.key === 'Shift') setIsShiftPressed(false); };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, []);
+
   const viewportModel = useMemo(() => ({
-    // Trackpad two-finger gesture = pan (via panOnScroll).
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    panOnScrollSpeed: 2.5,
-    // Zoom only via pinch or Ctrl/Cmd+scroll.
+    panOnScrollSpeed: 1.2,
     zoomOnScroll: false,
     zoomOnPinch: true,
     minZoom: 0.1,
