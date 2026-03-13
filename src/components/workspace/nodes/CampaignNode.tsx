@@ -40,6 +40,9 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
         onEdit={() => setDialogOpen(true)}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
+        onDuplicateSelected={data.onDuplicateSelected}
+        onDeleteSelected={data.onDeleteSelected}
+        selectedCount={data.selectedCount}
         elementType="campaign"
       >
         <div

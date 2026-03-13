@@ -209,6 +209,10 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   [elements]);
 
 
+  const deleteSelected = useCallback(() => {
+    if (selectedElementIds.length > 0) requestDelete(selectedElementIds);
+  }, [selectedElementIds, requestDelete]);
+
   const renderNodes = useMemo(() => nodes.map(node => ({
     ...node,
     data: {
@@ -216,10 +220,13 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       onEdit: handleEditElement,
       onDelete: handleDeleteElement,
       onDuplicate: handleDuplicateElement,
+      onDuplicateSelected: duplicateSelected,
+      onDeleteSelected: deleteSelected,
+      selectedCount: selectedElementIds.length,
       campaigns,
       adSets,
     },
-  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, campaigns, adSets]);
+  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, duplicateSelected, deleteSelected, selectedElementIds.length, campaigns, adSets]);
 
   // Hydrate viewport from saved state once nodes are ready
   const viewportRestoredRef = useRef(false);

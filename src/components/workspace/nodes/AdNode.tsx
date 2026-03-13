@@ -41,6 +41,9 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
         onEdit={() => setDialogOpen(true)}
         onDelete={() => data.onDelete(data.elementId)}
         onDuplicate={() => data.onDuplicate(data.elementId)}
+        onDuplicateSelected={data.onDuplicateSelected}
+        onDeleteSelected={data.onDeleteSelected}
+        selectedCount={data.selectedCount}
         elementType="ad"
       >
         <div
