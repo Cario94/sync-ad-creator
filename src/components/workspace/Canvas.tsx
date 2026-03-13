@@ -484,8 +484,8 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const viewportModel = useMemo(() => ({
     panOnScroll: true,
     panOnScrollMode: PanOnScrollMode.Free,
-    panOnScrollSpeed: 1.2,
-    zoomOnScroll: false,
+    panOnScrollSpeed: 0.8,
+    zoomOnScroll: true,
     zoomOnPinch: true,
     minZoom: 0.1,
     maxZoom: 3,
@@ -506,7 +506,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   return (
     <div className={`w-full h-full ${className}`}>
       <CanvasContextMenu elementType="" onAddCampaign={addCampaign} onAddAdSet={addAdSet} onAddAd={addAd} onSave={onSave}>
-        <div className="w-full h-full workspace-flow">
+        <div className="w-full h-full workspace-flow" style={{ touchAction: 'none' }}>
           <ReactFlow
             nodes={renderNodes}
             edges={edges}

@@ -218,6 +218,15 @@
   fill: hsl(var(--background) / 0.7);
 }
 
+.workspace-flow .react-flow__pane {
+  touch-action: none;
+  will-change: transform;
+}
+
+.workspace-flow .react-flow__node {
+  will-change: transform;
+}
+
 .workspace-flow .workspace-edge-path {
   filter: drop-shadow(0 1px 0 hsl(var(--background) / 0.5));
 }
