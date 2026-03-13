@@ -383,7 +383,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       return {
         ...n,
         id: newId,
-        position: { x: n.position.x + 30, y: n.position.y + 30 },
+        position: { x: n.position.x + 220, y: n.position.y },
         selected: false,
         data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
       };
