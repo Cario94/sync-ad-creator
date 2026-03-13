@@ -209,6 +209,25 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   [elements]);
 
 
+  const duplicateSelected = useCallback(() => {
+    const selected = nodes.filter(n => selectedElementIds.includes(n.id));
+    if (selected.length === 0) return;
+    pushSnapshot();
+    const newNodes: Node<WorkspaceFlowNodeData>[] = selected.map(n => {
+      const newId = generateId(n.type || 'node');
+      return {
+        ...n,
+        id: newId,
+        position: { x: n.position.x + 220, y: n.position.y },
+        selected: false,
+        data: { ...n.data, label: `${n.data.label} (copy)`, elementId: newId },
+      };
+    });
+    setNodes(prev => [...prev, ...newNodes]);
+    markDirty();
+    toast.success(`Duplicated ${newNodes.length} element${newNodes.length > 1 ? 's' : ''}`);
+  }, [nodes, selectedElementIds, pushSnapshot, setNodes, markDirty]);
+
   const deleteSelected = useCallback(() => {
     if (selectedElementIds.length > 0) requestDelete(selectedElementIds);
   }, [selectedElementIds, requestDelete]);
