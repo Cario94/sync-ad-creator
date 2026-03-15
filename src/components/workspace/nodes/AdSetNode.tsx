@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { ArrowRight, Plus, Users } from 'lucide-react';
+import { ArrowRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hydrateAdSetConfig, type CanvasElement } from '../types/canvas';
 import NodeValidationBadge from '../NodeValidationBadge';
@@ -19,6 +19,7 @@ export type AdSetNodeData = {
   onDuplicateSelected: () => void;
   onDeleteSelected: () => void;
   selectedCount: number;
+  onConnectNew: () => void;
 };
 
 export type AdSetNodeType = Node<AdSetNodeData, 'adset'>;
@@ -77,11 +78,13 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
             position={Position.Right}
             className="!w-7 !h-7 !rounded-full !border-2 !border-background !shadow-md !flex !items-center !justify-center !bg-accent-foreground !transition-transform !duration-150 hover:!scale-110"
             style={{ top: '50%' }}
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              data.onConnectNew();
+            }}
           >
-            <span className="relative !flex !items-center !justify-center">
-              <ArrowRight className="!w-4 !h-4 !text-background" />
-              <Plus className="!w-2.5 !h-2.5 !text-background absolute -top-1 -right-1" />
-            </span>
+            <ArrowRight className="!w-4 !h-4 !text-background" />
           </Handle>
         </div>
       </CanvasContextMenu>

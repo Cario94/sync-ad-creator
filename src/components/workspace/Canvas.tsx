@@ -28,7 +28,7 @@ import { Map } from 'lucide-react';
 
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
-import { CanvasElement } from './types/canvas';
+import { CanvasElement, defaultAdSetConfig, defaultAdConfig } from './types/canvas';
 import type { WorkspaceFlowNodeData } from '@/lib/workspaceGraphMapper';
 import { buildHierarchyLayout } from '@/lib/workspaceLayout';
 import { toast } from 'sonner';
@@ -245,6 +245,84 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     if (selectedElementIds.length > 0) requestDelete(selectedElementIds);
   }, [selectedElementIds, requestDelete]);
 
+  const connectNewAdSetFromCampaign = useCallback((campaignId: string) => {
+    const sourceNode = nodes.find(node => node.id === campaignId);
+    if (!sourceNode) return;
+
+    pushSnapshot();
+
+    const adSetId = generateId('adset');
+    const adSetNode: Node<WorkspaceFlowNodeData> = {
+      id: adSetId,
+      type: 'adset',
+      position: { x: sourceNode.position.x + 250, y: sourceNode.position.y },
+      selected: true,
+      data: {
+        label: `Ad Set ${nodes.filter(node => node.type === 'adset').length + 1}`,
+        config: defaultAdSetConfig() as unknown as Record<string, unknown>,
+        elementId: adSetId,
+      },
+    };
+
+    const edge: Edge = {
+      id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      source: campaignId,
+      target: adSetId,
+      type: 'workspace',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: 'hsl(var(--muted-foreground) / 0.8)',
+      },
+    };
+
+    setNodes(prev => [...prev.map(node => ({ ...node, selected: false })), adSetNode]);
+    setEdges(prev => addEdge(edge, prev));
+    setSelectedElementIds([adSetId]);
+    markDirty();
+    toast.success('Ad Set created');
+  }, [nodes, pushSnapshot, setNodes, setEdges, setSelectedElementIds, markDirty]);
+
+  const connectNewAdFromAdSet = useCallback((adSetId: string) => {
+    const sourceNode = nodes.find(node => node.id === adSetId);
+    if (!sourceNode) return;
+
+    pushSnapshot();
+
+    const adId = generateId('ad');
+    const adNode: Node<WorkspaceFlowNodeData> = {
+      id: adId,
+      type: 'ad',
+      position: { x: sourceNode.position.x + 250, y: sourceNode.position.y },
+      selected: true,
+      data: {
+        label: `Ad ${nodes.filter(node => node.type === 'ad').length + 1}`,
+        config: defaultAdConfig() as unknown as Record<string, unknown>,
+        elementId: adId,
+      },
+    };
+
+    const edge: Edge = {
+      id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      source: adSetId,
+      target: adId,
+      type: 'workspace',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: 'hsl(var(--muted-foreground) / 0.8)',
+      },
+    };
+
+    setNodes(prev => [...prev.map(node => ({ ...node, selected: false })), adNode]);
+    setEdges(prev => addEdge(edge, prev));
+    setSelectedElementIds([adId]);
+    markDirty();
+    toast.success('Ad created');
+  }, [nodes, pushSnapshot, setNodes, setEdges, setSelectedElementIds, markDirty]);
+
   const renderNodes = useMemo(() => nodes.map(node => ({
     ...node,
     data: {
@@ -254,11 +332,30 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
       onDuplicate: handleDuplicateElement,
       onDuplicateSelected: duplicateSelected,
       onDeleteSelected: deleteSelected,
+      onConnectNew: () => {
+        if (node.type === 'campaign') {
+          connectNewAdSetFromCampaign(node.id);
+        } else if (node.type === 'adset') {
+          connectNewAdFromAdSet(node.id);
+        }
+      },
       selectedCount: selectedElementIds.length,
       campaigns,
       adSets,
     },
-  })), [nodes, handleEditElement, handleDeleteElement, handleDuplicateElement, duplicateSelected, deleteSelected, selectedElementIds.length, campaigns, adSets]);
+  })), [
+    nodes,
+    handleEditElement,
+    handleDeleteElement,
+    handleDuplicateElement,
+    duplicateSelected,
+    deleteSelected,
+    connectNewAdSetFromCampaign,
+    connectNewAdFromAdSet,
+    selectedElementIds.length,
+    campaigns,
+    adSets,
+  ]);
 
   // Hydrate viewport from saved state once nodes are ready
   const viewportRestoredRef = useRef(false);

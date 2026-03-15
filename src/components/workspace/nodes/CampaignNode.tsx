@@ -1,6 +1,6 @@
 import React, { useState, memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { ArrowRight, Megaphone, Plus } from 'lucide-react';
+import { ArrowRight, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hydrateCampaignConfig, type CanvasElement } from '../types/canvas';
 import NodeValidationBadge from '../NodeValidationBadge';
@@ -18,6 +18,7 @@ export type CampaignNodeData = {
   onDuplicateSelected: () => void;
   onDeleteSelected: () => void;
   selectedCount: number;
+  onConnectNew: () => void;
 };
 
 export type CampaignNodeType = Node<CampaignNodeData, 'campaign'>;
@@ -70,11 +71,13 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
             position={Position.Right}
             className="!w-7 !h-7 !rounded-full !border-2 !border-background !shadow-md !flex !items-center !justify-center !bg-primary !transition-transform !duration-150 hover:!scale-110"
             style={{ top: '50%' }}
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              data.onConnectNew();
+            }}
           >
-            <span className="relative !flex !items-center !justify-center">
-              <ArrowRight className="!w-4 !h-4 !text-primary-foreground" />
-              <Plus className="!w-2.5 !h-2.5 !text-primary-foreground absolute -top-1 -right-1" />
-            </span>
+            <ArrowRight className="!w-4 !h-4 !text-primary-foreground" />
           </Handle>
         </div>
       </CanvasContextMenu>
