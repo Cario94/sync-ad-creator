@@ -4,10 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Plus,
-  Image,
-  Settings,
-  Undo,
-  Redo,
   Facebook,
   ChevronDown,
 } from 'lucide-react';
@@ -20,14 +16,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface ToolBarProps {
-  onUndo?: () => void;
-  onRedo?: () => void;
   onAddCampaign?: () => void;
   onAddAdSet?: () => void;
   onAddAd?: () => void;
 }
 
-const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo, onAddCampaign, onAddAdSet, onAddAd }) => {
+const ToolBar: React.FC<ToolBarProps> = ({ onAddCampaign, onAddAdSet, onAddAd }) => {
   const handleAction = (action: string) => {
     toast(`${action} clicked`, {
       description: 'This functionality will be available in the full version'
@@ -41,7 +35,7 @@ const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo, onAddCampaign, onAddA
   ];
 
   return (
-    <div className="glass-morphism p-2 rounded-lg flex justify-between w-full">
+    <div className="glass-morphism p-2 rounded-lg flex items-center justify-between w-full gap-3">
       {/* Left section - Ad Account */}
       <div className="flex items-center space-x-2">
         <DropdownMenu>
@@ -95,52 +89,9 @@ const ToolBar: React.FC<ToolBarProps> = ({ onUndo, onRedo, onAddCampaign, onAddA
             <TooltipContent><p>Add new Ad</p></TooltipContent>
           </Tooltip>
 
-          <div className="h-6 w-px bg-border mx-1"></div>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => handleAction("Media Library")} className="h-9 w-9">
-                <Image className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Media Library</p></TooltipContent>
-          </Tooltip>
-
-          <div className="h-6 w-px bg-border mx-1"></div>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onUndo} className="h-9 w-9">
-                <Undo className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Undo (Ctrl+Z)</p></TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onRedo} className="h-9 w-9">
-                <Redo className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Redo (Ctrl+Shift+Z)</p></TooltipContent>
-          </Tooltip>
         </TooltipProvider>
       </div>
 
-      {/* Right section - Settings */}
-      <div className="flex items-center space-x-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => handleAction("Settings")} className="h-9 w-9">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Settings</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
     </div>
   );
 };
