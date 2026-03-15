@@ -313,11 +313,6 @@
   transition: none !important;
 }
 
-[role='menu'] {
-  animation: none !important;
-  transition: none !important;
-}
-
 .animate-in,
 .animate-out,
 .fade-in-0,
@@ -329,7 +324,11 @@
   transform: none !important;
 }
 
-[data-state='open'],
-[data-state='closed'] {
+[role='menu'][data-state='open'],
+[role='menu'][data-state='closed'],
+[role='menuitem'],
+[data-radix-dropdown-menu-content],
+[data-radix-context-menu-content] {
   animation: none !important;
+  transition: none !important;
 }
