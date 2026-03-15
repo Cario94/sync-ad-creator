@@ -311,3 +311,29 @@
 .react-flow__pane:active {
   cursor: grabbing;
 }
+
+[data-radix-popper-content-wrapper] {
+  animation: none !important;
+  transition: none !important;
+}
+
+[role='menu'] {
+  animation: none !important;
+  transition: none !important;
+}
+
+.animate-in,
+.animate-out,
+.fade-in-0,
+.fade-out-0,
+.zoom-in-95,
+.zoom-out-95 {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+[data-state='open'],
+[data-state='closed'] {
+  animation: none !important;
+}
