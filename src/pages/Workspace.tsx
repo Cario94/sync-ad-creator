@@ -22,6 +22,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { exportJSON, exportCSV, exportMarkdown, copyToClipboard } from '@/lib/exportUtils';
 import { toast as sonnerToast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 /** Small pill showing current save status */
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
@@ -79,6 +87,7 @@ function WorkspaceInner() {
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<CanvasRef>(null);
@@ -132,6 +141,25 @@ function WorkspaceInner() {
 
   const handleTidyLayout = () => canvasRef.current?.tidyLayout();
 
+  const handleProjectsNavigation = () => {
+    if (saveStatus === 'unsaved') {
+      setLeaveConfirmOpen(true);
+      return;
+    }
+
+    navigate('/dashboard');
+  };
+
+  const handleSaveAndExit = async () => {
+    try {
+      await save();
+      setLeaveConfirmOpen(false);
+      navigate('/dashboard');
+    } catch {
+      toast({ title: 'Save failed', description: 'Could not save workspace. Please try again.', variant: 'destructive' });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
@@ -161,8 +189,12 @@ function WorkspaceInner() {
         </div>
 
         <nav className="flex-1 px-4 py-2">
+          <div className="mb-4 rounded-md border border-border bg-background/60 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Progetto corrente</p>
+            <p className="truncate text-sm font-medium">{projectName || 'Workspace'}</p>
+          </div>
           <div className="space-y-1">
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => navigate('/dashboard')}>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleProjectsNavigation}>
               <LayoutDashboard className="mr-3 h-5 w-5" />Projects
             </Button>
             <Button variant="secondary" className="w-full justify-start font-medium">
@@ -272,6 +304,26 @@ function WorkspaceInner() {
       <MediaLibraryDialog open={mediaLibraryOpen} onOpenChange={setMediaLibraryOpen} onSelect={handleMediaSelect} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
+      <Dialog open={leaveConfirmOpen} onOpenChange={setLeaveConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hai modifiche non salvate</DialogTitle>
+            <DialogDescription>
+              Hai modifiche non salvate. Vuoi salvare prima di tornare ai progetti?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="ghost" onClick={() => setLeaveConfirmOpen(false)}>Annulla</Button>
+            <Button variant="outline" onClick={() => { setLeaveConfirmOpen(false); navigate('/dashboard'); }}>
+              Esci senza salvare
+            </Button>
+            <Button onClick={handleSaveAndExit} disabled={saveStatus === 'saving'}>
+              {saveStatus === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Salva ed esci
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
