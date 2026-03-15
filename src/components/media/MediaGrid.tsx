@@ -72,6 +72,13 @@ const MediaGrid: React.FC<MediaGridProps> = ({
       onSelect(item);
     }
   };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: MediaItem) => {
+    const payload = JSON.stringify({ id: item.id, url: item.url });
+    e.dataTransfer.setData('application/x-media-asset', payload);
+    e.dataTransfer.setData('text/plain', payload);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
   
   // Function to determine which icon to show based on media type
   const getMediaIcon = (type: string) => {
@@ -103,8 +110,10 @@ const MediaGrid: React.FC<MediaGridProps> = ({
           onClick={selectable ? () => handleSelect(item) : undefined}
         >
           {/* Media Preview Area */}
-          <div 
+          <div
             className="aspect-square relative overflow-hidden bg-secondary/30 flex items-center justify-center"
+            draggable={item.type.startsWith('image/')}
+            onDragStart={(e) => handleDragStart(e, item)}
             onClick={(e) => {
               if (!selectable) {
                 e.stopPropagation();
