@@ -508,7 +508,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     // Use [1,2] to allow middle-mouse panning as well.
     panOnDrag: [1, 2] as number[],
     selectionOnDrag: true,
-    selectionMode: SelectionMode.Partial,
+    selectionMode: SelectionMode.Full,
     // Shift for additive multi-select.
     multiSelectionKeyCode: 'Shift' as const,
     // Space+drag for manual panning with left click.
@@ -552,7 +552,7 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
             connectionRadius={50}
             snapToGrid={isShiftPressed}
             snapGrid={SNAP_GRID}
-            nodeDragThreshold={1}
+            nodeDragThreshold={8}
             deleteKeyCode={null}
             elevateEdgesOnSelect
             onlyRenderVisibleElements
