@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MediaItem, useMediaLibrary } from '@/hooks/useMediaLibrary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -14,15 +14,40 @@ interface MediaLibraryDialogProps {
   onSelect: (item: MediaItem) => void;
 }
 
-const PANEL_WIDTH = 380;
-const PANEL_HEIGHT = 500;
+type PanelRect = { x: number; y: number; width: number; height: number };
+
+const DEFAULT_WIDTH = 380;
+const DEFAULT_HEIGHT = 500;
+const MIN_WIDTH = 320;
+const MIN_HEIGHT = 420;
 const PANEL_MARGIN = 24;
 
-const getDefaultPanelPosition = () => {
-  if (typeof window === 'undefined') return { x: 0, y: 0 };
+const getDefaultPanelRect = (): PanelRect => {
+  if (typeof window === 'undefined') {
+    return { x: 0, y: 0, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+  }
+
   return {
-    x: Math.max(PANEL_MARGIN, window.innerWidth - PANEL_WIDTH - PANEL_MARGIN),
-    y: Math.max(PANEL_MARGIN, window.innerHeight - PANEL_HEIGHT - PANEL_MARGIN),
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    x: Math.max(PANEL_MARGIN, window.innerWidth - DEFAULT_WIDTH - PANEL_MARGIN),
+    y: Math.max(PANEL_MARGIN, window.innerHeight - DEFAULT_HEIGHT - PANEL_MARGIN),
+  };
+};
+
+const clampRectToViewport = (rect: PanelRect): PanelRect => {
+  if (typeof window === 'undefined') return rect;
+
+  const maxWidth = Math.max(MIN_WIDTH, window.innerWidth - PANEL_MARGIN * 2);
+  const maxHeight = Math.max(MIN_HEIGHT, window.innerHeight - PANEL_MARGIN * 2);
+  const width = Math.min(maxWidth, Math.max(MIN_WIDTH, rect.width));
+  const height = Math.min(maxHeight, Math.max(MIN_HEIGHT, rect.height));
+
+  return {
+    width,
+    height,
+    x: Math.min(Math.max(0, rect.x), Math.max(0, window.innerWidth - width)),
+    y: Math.min(Math.max(0, rect.y), Math.max(0, window.innerHeight - height)),
   };
 };
 
@@ -34,8 +59,9 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState('browse');
-  const [position, setPosition] = useState(getDefaultPanelPosition);
-  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const [panelRect, setPanelRect] = useState<PanelRect>(() => clampRectToViewport(getDefaultPanelRect()));
+
+  const dragStartRef = useRef<{ pointerX: number; pointerY: number; startRect: PanelRect } | null>(null);
 
   const {
     isLoading,
@@ -45,6 +71,15 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
   } = useMediaLibrary();
 
   const filteredMedia = filterMedia(searchQuery);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setPanelRect(prev => clampRectToViewport(prev));
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -60,57 +95,88 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
     onSelect(item);
   };
 
-  const handleHeaderMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const startPointerInteraction = (
+    e: React.PointerEvent<HTMLDivElement>,
+    mode: 'drag' | 'resize',
+  ) => {
     if (e.button !== 0) return;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: position.x,
-      originY: position.y,
+    e.preventDefault();
+
+    dragStartRef.current = {
+      pointerX: e.clientX,
+      pointerY: e.clientY,
+      startRect: panelRect,
     };
 
-    const onMouseMove = (moveEvt: MouseEvent) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      const nextX = drag.originX + (moveEvt.clientX - drag.startX);
-      const nextY = drag.originY + (moveEvt.clientY - drag.startY);
-      setPosition({
-        x: Math.max(0, nextX),
-        y: Math.max(0, nextY),
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      const start = dragStartRef.current;
+      if (!start) return;
+
+      const dx = moveEvt.clientX - start.pointerX;
+      const dy = moveEvt.clientY - start.pointerY;
+
+      setPanelRect(() => {
+        if (mode === 'drag') {
+          return clampRectToViewport({
+            ...start.startRect,
+            x: start.startRect.x + dx,
+            y: start.startRect.y + dy,
+          });
+        }
+
+        return clampRectToViewport({
+          ...start.startRect,
+          width: start.startRect.width + dx,
+          height: start.startRect.height + dy,
+        });
       });
     };
 
-    const onMouseUp = () => {
-      dragRef.current = null;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+    const onPointerUp = () => {
+      dragStartRef.current = null;
+      document.body.style.userSelect = '';
+      target.removeEventListener('pointermove', onPointerMove);
+      target.removeEventListener('pointerup', onPointerUp);
+      target.removeEventListener('pointercancel', onPointerUp);
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  }, [position.x, position.y]);
+    target.addEventListener('pointermove', onPointerMove);
+    target.addEventListener('pointerup', onPointerUp);
+    target.addEventListener('pointercancel', onPointerUp);
+  };
 
   const panelStyle = useMemo(
-    () => ({ width: PANEL_WIDTH, height: PANEL_HEIGHT, left: position.x, top: position.y }),
-    [position.x, position.y],
+    () => ({
+      width: panelRect.width,
+      height: panelRect.height,
+      transform: `translate3d(${panelRect.x}px, ${panelRect.y}px, 0)`,
+      top: 0,
+      left: 0,
+    }),
+    [panelRect],
   );
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed z-[120] bg-card border border-border rounded-lg shadow-xl flex flex-col"
+      className="fixed z-[120] bg-card border border-border rounded-lg shadow-xl flex flex-col will-change-transform"
       style={panelStyle}
     >
       <div
-        className="h-12 px-4 border-b border-border flex items-center justify-between cursor-move select-none"
-        onMouseDown={handleHeaderMouseDown}
+        className="h-12 px-4 border-b border-border flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+        onPointerDown={(e) => startPointerInteraction(e, 'drag')}
       >
         <h2 className="font-semibold text-sm">Media Library</h2>
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onOpenChange(false)}
         >
           <X className="h-4 w-4" />
@@ -208,6 +274,13 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
             </TabsContent>
           </div>
         </Tabs>
+      </div>
+
+      <div
+        className="absolute bottom-0 right-0 h-4 w-4 cursor-se-resize"
+        onPointerDown={(e) => startPointerInteraction(e, 'resize')}
+      >
+        <div className="absolute bottom-1 right-1 h-2 w-2 border-b-2 border-r-2 border-muted-foreground/50" />
       </div>
     </div>
   );
