@@ -5,7 +5,7 @@ import ToolBar from '@/components/workspace/ToolBar';
 import MediaLibraryDialog from '@/components/media/MediaLibraryDialog';
 import {
   Menu, X, LayoutDashboard, Image, Settings, LogOut, User, DraftingCompass, Save, Loader2, Check, AlertCircle, Circle,
-  Download, FileJson, FileSpreadsheet, FileText, Copy,
+  Download, FileJson, FileSpreadsheet, FileText, Copy, Undo, Redo,
 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -238,6 +238,12 @@ function WorkspaceInner() {
           </div>
           <div className="text-lg font-semibold ml-auto mr-auto truncate max-w-xs">{projectName || 'Workspace'}</div>
           <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="icon" onClick={() => undo()} className="h-9 w-9">
+              <Undo className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => redo()} className="h-9 w-9">
+              <Redo className="h-4 w-4" />
+            </Button>
             <SaveStatusIndicator status={saveStatus} />
             <Button
               variant={saveStatus === 'unsaved' ? 'default' : 'outline'}
@@ -275,8 +281,6 @@ function WorkspaceInner() {
         {/* Toolbar */}
         <div className="p-4 flex justify-center">
           <ToolBar
-            onUndo={() => undo()}
-            onRedo={() => redo()}
             onAddCampaign={addCampaign}
             onAddAdSet={addAdSet}
             onAddAd={addAd}
