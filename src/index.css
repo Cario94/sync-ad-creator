@@ -49,7 +49,7 @@
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 223 47% 13%;
+    --card: 222 20% 14%;
     --card-foreground: 210 40% 98%;
 
     --popover: 223 47% 13%;
@@ -242,10 +242,6 @@
   backface-visibility: hidden;
 }
 
-.workspace-flow .workspace-edge-path {
-  filter: drop-shadow(0 1px 0 hsl(var(--background) / 0.5));
-}
-
 .workspace-flow .react-flow__edge:hover .workspace-edge-path,
 .workspace-flow .react-flow__edge.selected .workspace-edge-path {
   stroke: hsl(var(--primary));
@@ -295,10 +291,45 @@
   transition: box-shadow 0.15s ease;
 }
 
+
+.dark .react-flow__background {
+  --background: 222 20% 8%;
+}
+
+.dark .workspace-flow .react-flow__node {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+}
+
 .react-flow__pane {
   cursor: grab;
 }
 
 .react-flow__pane:active {
   cursor: grabbing;
+}
+
+[data-radix-popper-content-wrapper] {
+  animation: none !important;
+  transition: none !important;
+}
+
+[role='menu'] {
+  animation: none !important;
+  transition: none !important;
+}
+
+.animate-in,
+.animate-out,
+.fade-in-0,
+.fade-out-0,
+.zoom-in-95,
+.zoom-out-95 {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+[data-state='open'],
+[data-state='closed'] {
+  animation: none !important;
 }
