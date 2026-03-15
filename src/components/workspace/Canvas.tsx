@@ -24,6 +24,7 @@ import {
   PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Map } from 'lucide-react';
 
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -98,6 +99,15 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
   const [pendingAffected, setPendingAffected] = useState<CanvasElement[]>([]);
   const [pendingDirectTargets, setPendingDirectTargets] = useState<CanvasElement[]>([]);
+  const [showMinimap, setShowMinimap] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = window.localStorage.getItem('workspace.showMinimap');
+    return stored === null ? true : stored === 'true';
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem('workspace.showMinimap', String(showMinimap));
+  }, [showMinimap]);
 
   const elementsRef = useRef(elements);
   elementsRef.current = elements;
@@ -558,8 +568,19 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
               showInteractive={false}
               position="bottom-right"
             />
-            <Panel position="bottom-left">
-              <ResizableMiniMap />
+            <Panel position="bottom-left" className="!m-3">
+              <div className="flex flex-col items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMinimap(prev => !prev)}
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border bg-card shadow text-muted-foreground hover:text-foreground"
+                  aria-label={showMinimap ? 'Nascondi minimap' : 'Mostra minimap'}
+                  title={showMinimap ? 'Nascondi minimap' : 'Mostra minimap'}
+                >
+                  <Map className="h-4 w-4" />
+                </button>
+                {showMinimap && <ResizableMiniMap />}
+              </div>
             </Panel>
             <Panel position="top-left">
               <ValidationPanel />
