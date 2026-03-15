@@ -82,7 +82,7 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
         <div
           className={cn(
             'p-3.5 bg-card border border-muted-foreground/50 rounded-xl shadow-sm relative',
-            selected ? 'ring-2 ring-primary shadow-md' : '',
+            selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-md' : '',
           )}
           style={{ width: '240px', minHeight: '120px' }}
           onDoubleClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}

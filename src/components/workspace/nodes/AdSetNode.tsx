@@ -50,7 +50,7 @@ const AdSetNode: React.FC<NodeProps<AdSetNodeType>> = ({ data, selected }) => {
         <div
           className={cn(
             'p-4 bg-card border-2 border-blue-400/60 rounded-xl shadow-md relative',
-            selected ? 'ring-2 ring-primary shadow-lg' : '',
+            selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg' : '',
           )}
           style={{ width: '264px', minHeight: '130px' }}
           onDoubleClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}

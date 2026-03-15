@@ -49,7 +49,7 @@ const CampaignNode: React.FC<NodeProps<CampaignNodeType>> = ({ data, selected })
         <div
           className={cn(
             'p-5 w-72 bg-card border-2 border-primary/70 rounded-xl shadow-md relative',
-            selected ? 'ring-2 ring-primary shadow-xl' : '',
+            selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-xl' : '',
           )}
           onDoubleClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}
         >
