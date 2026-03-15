@@ -35,6 +35,39 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
     data.onEdit(data.elementId, { name: newName, config: rest });
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.types.includes('application/x-media-asset') || e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const serialized =
+      e.dataTransfer.getData('application/x-media-asset') ||
+      e.dataTransfer.getData('text/plain');
+
+    if (!serialized) return;
+
+    try {
+      const parsed = JSON.parse(serialized) as { id?: string; url?: string };
+      if (!parsed.id || !parsed.url) return;
+
+      data.onEdit(data.elementId, {
+        config: {
+          ...typed,
+          mediaAssetId: parsed.id,
+          imageUrl: parsed.url,
+        },
+      });
+    } catch {
+      // Ignore invalid drag payloads.
+    }
+  };
+
   return (
     <>
       <CanvasContextMenu
@@ -53,6 +86,8 @@ const AdNode: React.FC<NodeProps<AdNodeType>> = ({ data, selected }) => {
           )}
           style={{ width: '240px', minHeight: '120px' }}
           onDoubleClick={(e) => { e.stopPropagation(); setDialogOpen(true); }}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         >
           <NodeValidationBadge errors={errCount} warnings={warnCount} />
           <div className="flex items-center space-x-2 mb-2">

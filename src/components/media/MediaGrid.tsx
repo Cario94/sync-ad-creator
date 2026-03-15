@@ -72,6 +72,13 @@ const MediaGrid: React.FC<MediaGridProps> = ({
       onSelect(item);
     }
   };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: MediaItem) => {
+    const payload = JSON.stringify({ id: item.id, url: item.url });
+    e.dataTransfer.setData('application/x-media-asset', payload);
+    e.dataTransfer.setData('text/plain', payload);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
   
   // Function to determine which icon to show based on media type
   const getMediaIcon = (type: string) => {
@@ -92,7 +99,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
       {items.map(item => (
         <div 
           key={item.id} 
@@ -103,8 +110,10 @@ const MediaGrid: React.FC<MediaGridProps> = ({
           onClick={selectable ? () => handleSelect(item) : undefined}
         >
           {/* Media Preview Area */}
-          <div 
-            className="aspect-square relative overflow-hidden bg-secondary/30 flex items-center justify-center"
+          <div
+            className="aspect-[4/3] relative overflow-hidden bg-secondary/30 flex items-center justify-center"
+            draggable={item.type.startsWith('image/')}
+            onDragStart={(e) => handleDragStart(e, item)}
             onClick={(e) => {
               if (!selectable) {
                 e.stopPropagation();
@@ -116,7 +125,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
               <img 
                 src={item.url} 
                 alt={item.name}
-                className="object-cover w-full h-full"
+                className="object-contain w-full h-full p-1"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : item.type.startsWith('video/') ? (
