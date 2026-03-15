@@ -428,6 +428,10 @@ const CanvasInner = React.forwardRef<CanvasRef, CanvasProps>(({
     if (!kbShortcutsEnabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isRadixMenu = activeEl?.closest('[role=menu]') || activeEl?.closest('[data-radix-popper-content-wrapper]');
+      if (isRadixMenu) return;
+
       // Skip if inside input/textarea
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
