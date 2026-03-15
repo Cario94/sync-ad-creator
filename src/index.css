@@ -242,10 +242,6 @@
   backface-visibility: hidden;
 }
 
-.workspace-flow .workspace-edge-path {
-  filter: drop-shadow(0 1px 0 hsl(var(--background) / 0.5));
-}
-
 .workspace-flow .react-flow__edge:hover .workspace-edge-path,
 .workspace-flow .react-flow__edge.selected .workspace-edge-path {
   stroke: hsl(var(--primary));
