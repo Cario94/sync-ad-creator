@@ -62,6 +62,7 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
   const [panelRect, setPanelRect] = useState<PanelRect>(() => clampRectToViewport(getDefaultPanelRect()));
 
   const dragStartRef = useRef<{ pointerX: number; pointerY: number; startRect: PanelRect } | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   const {
     isLoading,
@@ -114,29 +115,47 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
 
     const onPointerMove = (moveEvt: PointerEvent) => {
       const start = dragStartRef.current;
-      if (!start) return;
+      const panel = panelRef.current;
+      if (!start || !panel) return;
 
       const dx = moveEvt.clientX - start.pointerX;
       const dy = moveEvt.clientY - start.pointerY;
 
-      setPanelRect(() => {
-        if (mode === 'drag') {
-          return clampRectToViewport({
-            ...start.startRect,
-            x: start.startRect.x + dx,
-            y: start.startRect.y + dy,
-          });
-        }
-
-        return clampRectToViewport({
+      const nextRect = mode === 'drag'
+        ? clampRectToViewport({
+          ...start.startRect,
+          x: start.startRect.x + dx,
+          y: start.startRect.y + dy,
+        })
+        : clampRectToViewport({
           ...start.startRect,
           width: start.startRect.width + dx,
           height: start.startRect.height + dy,
         });
-      });
+
+      panel.style.left = `${nextRect.x}px`;
+      panel.style.top = `${nextRect.y}px`;
+      panel.style.width = `${nextRect.width}px`;
+      panel.style.height = `${nextRect.height}px`;
     };
 
     const onPointerUp = () => {
+      const panel = panelRef.current;
+      const startRect = dragStartRef.current?.startRect ?? panelRect;
+      if (panel) {
+        const left = Number.parseFloat(panel.style.left);
+        const top = Number.parseFloat(panel.style.top);
+        const width = Number.parseFloat(panel.style.width);
+        const height = Number.parseFloat(panel.style.height);
+
+        setPanelRect(clampRectToViewport({
+          x: Number.isFinite(left) ? left : startRect.x,
+          y: Number.isFinite(top) ? top : startRect.y,
+          width: Number.isFinite(width) ? width : startRect.width,
+          height: Number.isFinite(height) ? height : startRect.height,
+        }));
+      }
+
       dragStartRef.current = null;
       document.body.style.userSelect = '';
       target.removeEventListener('pointermove', onPointerMove);
@@ -153,9 +172,8 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
     () => ({
       width: panelRect.width,
       height: panelRect.height,
-      transform: `translate3d(${panelRect.x}px, ${panelRect.y}px, 0)`,
-      top: 0,
-      left: 0,
+      left: panelRect.x,
+      top: panelRect.y,
     }),
     [panelRect],
   );
@@ -164,8 +182,9 @@ const MediaLibraryDialog: React.FC<MediaLibraryDialogProps> = ({
 
   return (
     <div
-      className="fixed z-[120] bg-card border border-border rounded-lg shadow-xl flex flex-col will-change-transform"
-      style={panelStyle}
+      className="fixed z-[120] bg-card border border-border rounded-lg shadow-xl flex flex-col"
+      ref={panelRef}
+      style={{ ...panelStyle, willChange: 'transform' }}
     >
       <div
         className="h-12 px-4 border-b border-border flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
